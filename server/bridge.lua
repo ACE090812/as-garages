@@ -161,3 +161,19 @@ function Bridge.setNative(plate, stored, garage)
             { stored and 1 or 0, garage, plate })
     end
 end
+
+-- Pay a player money (used for sale proceeds and refunds).
+function Bridge.give(src, amount, reason)
+    Bridge.refund(src, amount, reason)
+end
+
+-- Hand a vehicle to a new owner in the framework's own table.
+function Bridge.setOwner(plate, newOwnerId, newOwnerSrc)
+    if fw == 'esx' then
+        MySQL.update.await('UPDATE owned_vehicles SET owner = ? WHERE TRIM(plate) = ?', { newOwnerId, plate })
+    else
+        local license = GetPlayerIdentifierByType(newOwnerSrc, 'license')
+        MySQL.update.await('UPDATE player_vehicles SET citizenid = ?, license = ? WHERE TRIM(plate) = ?',
+            { newOwnerId, license, plate })
+    end
+end

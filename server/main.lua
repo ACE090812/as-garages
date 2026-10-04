@@ -1,27 +1,42 @@
 Garages = {}   -- id -> normalised garage
 Spawned = {}   -- plate -> { netId, src, garage, misses }
 Pending = {}   -- plate -> { src, prev, garage, paid }
-local Locks = {}
+Locks = {}     -- plate -> true while a state change is in flight
+Access = {}    -- private garage id -> { [identifier] = true }
 
 local function vec3From(c) return vec3(c.x, c.y, c.z) end
 local function vec4From(c) return vec4(c.x, c.y, c.z, c.w or c.h or 0.0) end
+
+-- Vehicle classes a garage can accept. Chips in the admin editor use these keys.
+local CLASS_TYPES = {
+    cars = { 'automobile', 'quadbike' }, bikes = { 'bike' },
+    boats = { 'boat', 'submarine' }, air = { 'heli', 'plane', 'blimp' },
+}
 
 function Normalise(g)
     g.coords = vec3From(g.coords)
     g.radius = g.radius or 3.0
     g.slots = g.slots or 10
     g.type = g.type or 'public'
+    if g.type == 'private' then g.shared = true end
     local spawns = {}
     for _, s in ipairs(g.spawns or {}) do spawns[#spawns + 1] = vec4From(s) end
     g.spawns = spawns
     if g.preview then g.preview = vec4From(g.preview) end
+    g.allowed = nil
+    if g.vehicleClasses and #g.vehicleClasses > 0 then
+        g.allowed = {}
+        for _, key in ipairs(g.vehicleClasses) do
+            for _, t in ipairs(CLASS_TYPES[key] or {}) do g.allowed[t] = true end
+        end
+    end
     return g
 end
 
 function LoadGarages()
     Garages = {}
     for _, g in ipairs(Config.Garages) do
-        g.static = true
+        g.inConfig = true
         Garages[g.id] = Normalise(g)
     end
     local rows = MySQL.query.await('SELECT id, data FROM as_garage_locations')
@@ -29,32 +44,88 @@ function LoadGarages()
         local ok, g = pcall(json.decode, r.data)
         if ok and type(g) == 'table' then
             g.id = r.id
+            g.override = true
+            g.inConfig = Garages[g.id] ~= nil
             Garages[g.id] = Normalise(g)
         end
     end
 end
 
--- What a given player may see: public + impound always, job/gang only with the right group.
+function LoadAccess()
+    Access = {}
+    local rows = MySQL.query.await('SELECT garage, identifier FROM as_garage_access')
+    for _, r in ipairs(rows or {}) do
+        Access[r.garage] = Access[r.garage] or {}
+        Access[r.garage][r.identifier] = true
+    end
+end
+
+-- Can this player use the garage right now?
 function CanUse(p, g)
     if g.type == 'public' or g.type == 'impound' then return true end
     if g.type == 'job' then return Bridge.hasGroup(p.job, p.grade, g.jobs) end
     if g.type == 'gang' then return Bridge.hasGroup(p.gang, p.gangGrade, g.gangs) end
+    if g.type == 'private' then
+        if not g.owner then return false end
+        return g.owner == p.id or (Access[g.id] ~= nil and Access[g.id][p.id] == true)
+    end
     return false
 end
+
+function IsForSale(g) return g.type == 'private' and not g.owner end
 
 function InRange(src, g)
     local ped = GetPlayerPed(src)
     return ped ~= 0 and #(GetEntityCoords(ped) - g.coords) <= (g.radius + 12.0)
 end
 
-function Log(title, desc)
-    Debug(title, desc)
+-- Plain table safe to send to clients / save as JSON.
+function Plain(g, forAdmin)
+    local out = {
+        id = g.id, label = g.label, sub = g.sub, type = g.type, radius = g.radius, slots = g.slots,
+        coords = { x = g.coords.x, y = g.coords.y, z = g.coords.z },
+        spawns = {}, blip = g.blip or nil, price = g.price, forSale = IsForSale(g) or nil,
+    }
+    for i, s in ipairs(g.spawns) do out.spawns[i] = { x = s.x, y = s.y, z = s.z, w = s.w } end
+    if g.preview then out.preview = { x = g.preview.x, y = g.preview.y, z = g.preview.z, w = g.preview.w } end
+    if forAdmin then
+        out.shared, out.jobs, out.gangs = g.shared, g.jobs, g.gangs
+        out.vehicleClasses = g.vehicleClasses or {}
+        out.owner, out.ownerName = g.owner, g.ownerName
+        out.inConfig, out.override = g.inConfig or false, g.override or false
+        out.blipOn = g.blip ~= nil and g.blip ~= false
+    end
+    return out
+end
+
+function PersistGarage(g)
+    local data = Plain(g, true)
+    data.id, data.inConfig, data.override, data.blipOn, data.forSale = nil, nil, nil, nil, nil
+    MySQL.update.await('INSERT INTO as_garage_locations (id, data) VALUES (?, ?) ON DUPLICATE KEY UPDATE data = VALUES(data)',
+        { g.id, json.encode(data) })
+end
+
+function RefreshAll()
+    LoadGarages()
+    TriggerClientEvent('asg:refresh', -1)
+end
+
+function Log(action, desc, plate)
+    Debug(action, desc)
+    MySQL.insert('INSERT INTO as_garage_logs (ts, action, plate, detail) VALUES (?, ?, ?, ?)',
+        { os.time(), action, plate, tostring(desc):sub(1, 400) })
     if Config.Webhook == '' then return end
     PerformHttpRequest(Config.Webhook, function() end, 'POST', json.encode({
         username = 'AS Garages',
-        embeds = {{ title = title, description = desc, color = 10855935,
+        embeds = {{ title = action, description = desc, color = 10855935,
                     footer = { text = os.date('%Y-%m-%d %H:%M:%S') } }},
     }), { ['Content-Type'] = 'application/json' })
+end
+
+local function ensureColumn(tbl, col, ddl)
+    local n = MySQL.scalar.await([[SELECT COUNT(*) FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?]], { tbl, col })
+    if (n or 0) == 0 then MySQL.query.await(('ALTER TABLE `%s` ADD COLUMN %s'):format(tbl, ddl)) end
 end
 
 local function setup()
@@ -67,9 +138,20 @@ local function setup()
         `impound_fee` INT NOT NULL DEFAULT 0, `impound_at` BIGINT NOT NULL DEFAULT 0,
         `impound_until` BIGINT NOT NULL DEFAULT 0, `owner_release` TINYINT NOT NULL DEFAULT 1,
         PRIMARY KEY (`plate`), KEY `garage_state` (`garage`, `state`))]])
+    ensureColumn('as_garage_vehicles', 'nick', '`nick` VARCHAR(40) NULL')
     MySQL.query.await([[CREATE TABLE IF NOT EXISTS `as_garage_locations` (
         `id` VARCHAR(64) NOT NULL, `data` LONGTEXT NOT NULL, PRIMARY KEY (`id`))]])
+    MySQL.query.await([[CREATE TABLE IF NOT EXISTS `as_garage_access` (
+        `garage` VARCHAR(64) NOT NULL, `identifier` VARCHAR(64) NOT NULL, `name` VARCHAR(100) NULL,
+        PRIMARY KEY (`garage`, `identifier`))]])
+    MySQL.query.await([[CREATE TABLE IF NOT EXISTS `as_garage_logs` (
+        `id` INT NOT NULL AUTO_INCREMENT, `ts` BIGINT NOT NULL, `action` VARCHAR(64) NOT NULL,
+        `plate` VARCHAR(12) NULL, `detail` VARCHAR(400) NULL,
+        PRIMARY KEY (`id`), KEY `ts` (`ts`), KEY `plate` (`plate`))]])
+    MySQL.update('DELETE FROM as_garage_logs WHERE ts < ?', { os.time() - Config.LogDays * 86400 })
+
     LoadGarages()
+    LoadAccess()
 
     -- Anything still marked "out" at startup was lost with the previous server session.
     if Config.StuckBehaviour == 'impound' then
@@ -92,13 +174,7 @@ lib.callback.register('asg:getGarages', function(src)
     if not p then return {} end
     local out = {}
     for _, g in pairs(Garages) do
-        if CanUse(p, g) then
-            out[#out + 1] = {
-                id = g.id, label = g.label, sub = g.sub, type = g.type, radius = g.radius, slots = g.slots,
-                coords = { x = g.coords.x, y = g.coords.y, z = g.coords.z },
-                spawns = g.spawns, preview = g.preview, blip = g.blip,
-            }
-        end
+        if IsForSale(g) or CanUse(p, g) then out[#out + 1] = Plain(g) end
     end
     return out
 end)
@@ -144,7 +220,7 @@ local function listVehicles(p, g)
         out[#out + 1] = {
             plate = v.plate, model = v.model, status = statusFor(row, g), at = at and at.label or nil,
             fuel = row.fuel, eng = row.engine, body = row.body, km = math.floor(row.mileage or 0),
-            storedAt = row.stored_at, fav = row.fav == 1,
+            storedAt = row.stored_at, fav = row.fav == 1, nick = row.nick, mine = v.owner == p.id,
         }
     end
     return out
@@ -175,7 +251,7 @@ local function listImpounded(p, g, officer)
             local storage, days = storageFee(row)
             out[#out + 1] = {
                 plate = row.plate, model = v.model, status = 'imp', fuel = row.fuel, eng = row.engine, body = row.body,
-                km = math.floor(row.mileage or 0), storedAt = row.impound_at, fav = false,
+                km = math.floor(row.mileage or 0), storedAt = row.impound_at, fav = false, nick = row.nick,
                 imp = { reason = row.impound_reason, by = row.impound_by, at = row.impound_at, until_ = row.impound_until,
                         fee = row.impound_fee, storage = storage, days = days, ownerRelease = row.owner_release == 1 },
             }
@@ -184,36 +260,37 @@ local function listImpounded(p, g, officer)
     return out
 end
 
-local function isOfficer(p)
+function IsOfficer(p)
     return p ~= nil and Bridge.hasGroup(p.job, p.grade, Config.ImpoundJobs)
 end
-IsOfficer = isOfficer
 
 lib.callback.register('asg:getGarage', function(src, id)
     local g = Garages[id]
     local p = Bridge.getPlayer(src)
-    if not g or not p or not InRange(src, g) or not CanUse(p, g) then return nil end
+    if not g or not p or not InRange(src, g) then return nil end
 
-    local data = {
-        garage = { id = g.id, label = g.label, sub = g.sub, type = g.type, slots = g.slots },
-        now = os.time(),
-    }
+    local info = { id = g.id, label = g.label, sub = g.sub, type = g.type, slots = g.slots, price = g.price }
+    if IsForSale(g) then return { garage = info, forSale = true } end
+    if not CanUse(p, g) then return nil end
+
+    local data = { garage = info, now = os.time() }
     if g.type == 'impound' then
-        local officer = isOfficer(p)
+        local officer = IsOfficer(p)
         data.vehicles = listImpounded(p, g, officer)
         data.officer = officer
         data.tab = 'impound'
     else
         data.vehicles = listVehicles(p, g)
         data.tab = g.type == 'public' and 'mine' or g.type
-        data.garage.used = MySQL.scalar.await('SELECT COUNT(*) FROM as_garage_vehicles WHERE garage = ? AND state = 1', { g.id }) or 0
+        data.isOwner = g.type == 'private' and g.owner == p.id or nil
+        info.used = MySQL.scalar.await('SELECT COUNT(*) FROM as_garage_vehicles WHERE garage = ? AND state = 1', { g.id }) or 0
     end
     return data
 end)
 
 -- Vehicle leaves the garage. The row is flipped atomically before anything spawns, so two
 -- players (or one player spamming) can never pull the same plate out twice.
-local function reserve(src, plate, prev, garage, paid)
+function Reserve(src, plate, prev, garage, paid)
     Pending[plate] = { src = src, prev = prev, garage = garage, paid = paid }
     SetTimeout(20000, function()
         local pend = Pending[plate]
@@ -224,7 +301,6 @@ local function reserve(src, plate, prev, garage, paid)
         end
     end)
 end
-Reserve = reserve
 
 lib.callback.register('asg:takeOut', function(src, garageId, plate, bay)
     local g = Garages[garageId]
@@ -247,8 +323,8 @@ lib.callback.register('asg:takeOut', function(src, garageId, plate, bay)
     if flipped ~= 1 then return false, 'unavailable' end
 
     Bridge.setNative(plate, false, g.id)
-    reserve(src, plate, 1, g.id)
-    Log('Vehicle taken out', ('%s (%s) took %s from %s'):format(p.name, p.id, plate, g.label))
+    Reserve(src, plate, 1, g.id)
+    Log('Vehicle taken out', ('%s (%s) took %s from %s'):format(p.name, p.id, plate, g.label), plate)
     return true, { model = v.model, props = v.props, spawn = spawn, plate = plate }
 end)
 
@@ -272,12 +348,6 @@ lib.callback.register('asg:spawnFailed', function(src, plate)
     return true
 end)
 
-local function sanitiseProps(props, rawPlate)
-    if type(props) ~= 'table' then return nil end
-    props.plate = rawPlate
-    return props
-end
-
 lib.callback.register('asg:store', function(src, garageId, netId, props, km)
     local g = Garages[garageId]
     local p = Bridge.getPlayer(src)
@@ -288,14 +358,16 @@ lib.callback.register('asg:store', function(src, garageId, netId, props, km)
     local entity = NetworkGetEntityFromNetworkId(netId)
     if not entity or entity == 0 or not DoesEntityExist(entity) then return false, 'unavailable' end
     if #(GetEntityCoords(entity) - g.coords) > g.radius + 20.0 then return false, 'too_far' end
+    if g.allowed and not g.allowed[GetVehicleType(entity)] then return false, 'type_not_allowed' end
 
     local rawPlate = GetVehicleNumberPlateText(entity)
     local plate = NormPlate(rawPlate)
     if Locks[plate] then return false, 'unavailable' end
 
+    -- Players can only store vehicles they own, even in shared garages.
     local v = Bridge.getVehicle(plate)
     if not v then return false, 'invalid_vehicle' end
-    if not g.shared and v.owner ~= p.id then return false, 'not_owner' end
+    if v.owner ~= p.id then return false, 'not_owner' end
 
     Locks[plate] = true
     local row = MySQL.single.await('SELECT state, garage FROM as_garage_vehicles WHERE plate = ?', { plate })
@@ -305,12 +377,13 @@ lib.callback.register('asg:store', function(src, garageId, netId, props, km)
         if used >= g.slots then Locks[plate] = nil return false, 'garage_full' end
     end
 
-    props = sanitiseProps(props, rawPlate)
-    if props then
+    if type(props) == 'table' then
+        props.plate = rawPlate
         props.model = props.model or v.model
         Bridge.saveProps(plate, props)
+    else
+        props = v.props
     end
-    props = props or v.props
     km = math.min(math.max(tonumber(km) or 0, 0), 500)
 
     MySQL.update.await([[INSERT INTO as_garage_vehicles (plate, garage, state, fuel, engine, body, mileage, stored_at)
@@ -327,7 +400,7 @@ lib.callback.register('asg:store', function(src, garageId, netId, props, km)
     Spawned[plate] = nil
     DeleteEntity(entity)
     Locks[plate] = nil
-    Log('Vehicle stored', ('%s (%s) stored %s in %s'):format(p.name, p.id, plate, g.label))
+    Log('Vehicle stored', ('%s (%s) stored %s in %s'):format(p.name, p.id, plate, g.label), plate)
     return true, plate
 end)
 
@@ -364,7 +437,7 @@ function MarkLost(plate)
         MySQL.update('UPDATE as_garage_vehicles SET state = 1 WHERE plate = ? AND state = 0', { plate })
         Bridge.setNative(plate, true, s and s.garage or Config.DefaultGarage)
     end
-    Log('Vehicle lost', plate .. ' no longer exists in the world')
+    Log('Vehicle lost', plate .. ' no longer exists in the world', plate)
 end
 
 CreateThread(function()

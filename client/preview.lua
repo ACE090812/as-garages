@@ -9,7 +9,7 @@ function Preview.removeVehicle()
     veh = nil
 end
 
-function Preview.show(g, model)
+function Preview.show(g, model, props)
     if not g or not g.preview then return end
     local hash = type(model) == 'number' and model or joaat(model or '')
     if not IsModelInCdimage(hash) then return end
@@ -21,6 +21,7 @@ function Preview.show(g, model)
     SetModelAsNoLongerNeeded(hash)
     if not veh or veh == 0 then veh = nil return end
 
+    if props then lib.setVehicleProperties(veh, props) end
     SetVehicleOnGroundProperly(veh)
     SetEntityCollision(veh, false, false)
     FreezeEntityPosition(veh, true)
