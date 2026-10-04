@@ -18,7 +18,8 @@
   --bar: rgba(255, 255, 255, .1);
   --shadow: 0 20px 60px rgba(0, 0, 0, .35);
   --veil: rgba(0, 0, 0, .45);
-  --stage: linear-gradient(to top, rgba(8, 9, 14, .55), rgba(8, 9, 14, 0) 40%);
+  --stage: linear-gradient(to bottom, rgba(8, 9, 14, .55), rgba(8, 9, 14, 0) 22%), linear-gradient(to top, rgba(8, 9, 14, .6), rgba(8, 9, 14, 0) 40%);
+  --tshadow: 0 2px 14px rgba(0, 0, 0, .55);
   --admin-bg: rgba(14, 16, 26, .92);
 }
 
@@ -36,7 +37,8 @@
   --ok: #0F7D58;
   --warn: #8F6200;
   --bad: #BE352B;
-  --stage: linear-gradient(to top, rgba(255, 255, 255, .35), rgba(255, 255, 255, 0) 40%);
+  --stage: linear-gradient(to bottom, rgba(255, 255, 255, .5), rgba(255, 255, 255, 0) 22%), linear-gradient(to top, rgba(255, 255, 255, .5), rgba(255, 255, 255, 0) 40%);
+  --tshadow: 0 1px 12px rgba(255, 255, 255, .7);
   --admin-bg: rgba(245, 246, 251, .96);
 }
 
@@ -85,6 +87,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
 /* ---------- top bar ---------- */
 #titleblock { position: absolute; left: 64px; top: 56px; display: flex; flex-direction: column; gap: 10px; }
+#titleblock { text-shadow: var(--tshadow); }
+#titleblock .pill { text-shadow: none; }
 #titleblock h1 { margin: 0; font-size: 44px; font-weight: 700; line-height: 1.05; }
 #titleblock .sub { display: flex; align-items: center; gap: 12px; font-size: 15px; color: var(--muted); }
 .pill { padding: 6px 14px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); color: var(--text); font-weight: 600; }
@@ -131,10 +135,10 @@ button.pill:hover { background: var(--f3); }
 .iconbtn { min-width: 48px; padding: 0; border-radius: 999px; }
 
 /* ---------- vehicle strip ---------- */
-#strip { position: absolute; left: 64px; right: 64px; bottom: 96px; display: flex; gap: 16px; overflow-x: auto; padding: 4px 0 12px; scrollbar-width: none; }
+#strip { position: absolute; left: 40px; right: 40px; bottom: 72px; display: flex; gap: 16px; overflow-x: auto; padding: 16px 24px 40px; scrollbar-width: none; }
 #strip::-webkit-scrollbar { display: none; }
 .vcard { flex: 0 0 264px; display: flex; flex-direction: column; gap: 12px; text-align: left; padding: 16px 18px; border-radius: 22px; border: 1px solid var(--line);
-  background: var(--glass); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); box-shadow: var(--shadow); }
+  background: var(--glass); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); box-shadow: 0 8px 24px rgba(0, 0, 0, .28); }
 .vcard:hover { background: var(--f3); transform: translateY(-3px); }
 .vcard.sel { border-color: var(--accent); background: var(--accent-soft); }
 .vcard .n { font-family: 'Sora', sans-serif; font-weight: 600; font-size: 16px; line-height: 1.2; letter-spacing: -.02em; }
@@ -145,7 +149,7 @@ button.pill:hover { background: var(--f3); }
 .vcard .f { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
 .vcard .f .bar { flex: 1; height: 5px; } .vcard .f .bar i { height: 5px; background: var(--accent); }
 
-#hints { position: absolute; left: 0; right: 0; bottom: 44px; display: flex; justify-content: center; gap: 32px; font-size: 13px; color: var(--muted); }
+#hints { text-shadow: var(--tshadow); position: absolute; left: 0; right: 0; bottom: 44px; display: flex; justify-content: center; gap: 32px; font-size: 13px; color: var(--muted); }
 #hints b { color: var(--text); }
 
 /* ---------- modals (officer, rename, transfer, sell) ---------- */
