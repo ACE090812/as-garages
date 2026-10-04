@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `as_garage_vehicles` (
   `impound_at` BIGINT NOT NULL DEFAULT 0,
   `impound_until` BIGINT NOT NULL DEFAULT 0,
   `owner_release` TINYINT NOT NULL DEFAULT 1,
+  `nick` VARCHAR(40) NULL,
   PRIMARY KEY (`plate`),
   KEY `garage_state` (`garage`, `state`)
 );
@@ -26,3 +27,23 @@ CREATE TABLE IF NOT EXISTS `as_garage_locations` (
   `data` LONGTEXT NOT NULL,
   PRIMARY KEY (`id`)
 );
+
+CREATE TABLE IF NOT EXISTS `as_garage_access` (
+  `garage` VARCHAR(64) NOT NULL,
+  `identifier` VARCHAR(64) NOT NULL,
+  `name` VARCHAR(100) NULL,
+  PRIMARY KEY (`garage`, `identifier`)
+);
+
+CREATE TABLE IF NOT EXISTS `as_garage_logs` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `ts` BIGINT NOT NULL,
+  `action` VARCHAR(64) NOT NULL,
+  `plate` VARCHAR(12) NULL,
+  `detail` VARCHAR(400) NULL,
+  PRIMARY KEY (`id`),
+  KEY `ts` (`ts`),
+  KEY `plate` (`plate`)
+);
+
+-- Upgrading from 0.1.0? The resource adds the `nick` column to as_garage_vehicles itself on start.

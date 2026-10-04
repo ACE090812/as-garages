@@ -15,6 +15,7 @@ function VehLabel(model)
 end
 
 local function promptFor(g)
+    if g.forSale then return L('buy_garage', g.price or 0) end
     if g.type == 'impound' then return L('open_impound') end
     if cache.vehicle and cache.seat == -1 then return L('store_vehicle') end
     return L('open_garage')
@@ -24,7 +25,7 @@ local function makeBlip(g)
     if not g.blip then return end
     local b = AddBlipForCoord(g.coords.x, g.coords.y, g.coords.z)
     SetBlipSprite(b, g.blip.sprite or 357)
-    SetBlipColour(b, g.blip.color or 3)
+    SetBlipColour(b, g.forSale and 2 or g.blip.color or 3)
     SetBlipScale(b, g.blip.scale or 0.7)
     SetBlipAsShortRange(b, true)
     BeginTextCommandSetBlipName('STRING')
@@ -132,7 +133,9 @@ local function storeVehicle(g)
 end
 
 local function interact(g)
-    if g.type == 'impound' then
+    if g.forSale then
+        if not cache.vehicle then BuyGarage(g) end
+    elseif g.type == 'impound' then
         if not cache.vehicle then OpenGarage(g) end
     elseif cache.vehicle and cache.seat == -1 then
         storeVehicle(g)
@@ -191,30 +194,33 @@ RegisterCommand('impound', function()
     OpenOfficer(veh)
 end, false)
 
--- /asgarage helpers (admin)
-RegisterNetEvent('asg:admin:create', function()
-    local input = lib.inputDialog('New garage', {
-        { type = 'input', label = 'Id (letters, numbers, _)', required = true },
-        { type = 'input', label = 'Label', required = true },
-        { type = 'input', label = 'Subtitle' },
-        { type = 'select', label = 'Type', required = true, default = 'public', options = {
-            { value = 'public', label = 'Public' }, { value = 'job', label = 'Job' },
-            { value = 'gang', label = 'Gang' }, { value = 'impound', label = 'Impound lot' } } },
-        { type = 'input', label = 'Job or gang name (job/gang types)' },
-        { type = 'number', label = 'Slots', default = 10, min = 1, max = 200 },
+-- Buying a private / house garage that is for sale
+function BuyGarage(g)
+    local answer = lib.alertDialog({
+        header = L('buy_garage_title'), content = L('buy_confirm', g.label, g.price or 0), centered = true, cancel = true,
     })
-    if not input then return end
-    local c = GetEntityCoords(cache.ped)
-    local ok, msg = lib.callback.await('asg:admin:save', false,
-        { id = input[1], label = input[2], sub = input[3], type = input[4], group = input[5], slots = input[6] },
-        { x = c.x, y = c.y, z = c.z })
-    lib.notify({ description = msg or (ok and 'Saved.' or 'Failed.'), type = ok and 'success' or 'error' })
-end)
+    if answer ~= 'confirm' then return end
+    local ok, key, extra = lib.callback.await('asg:buy', false, g.id)
+    if ok then
+        Sfx('confirm')
+        Notify('garage_bought', key)
+    else
+        Sfx('error')
+        Notify(key or 'unavailable', extra)
+    end
+end
 
-RegisterNetEvent('asg:admin:capture', function(action, id)
-    local c, h = GetEntityCoords(cache.ped), GetEntityHeading(cache.ped)
-    -- If sitting in a vehicle, use the vehicle's position and heading (what a bay should match).
-    if cache.vehicle then c, h = GetEntityCoords(cache.vehicle), GetEntityHeading(cache.vehicle) end
-    local ok, msg = lib.callback.await('asg:admin:point', false, action, id, { x = c.x, y = c.y, z = c.z, w = h })
-    lib.notify({ description = ok and ('Saved %s for %s.'):format(action, id) or msg, type = ok and 'success' or 'error' })
+-- Another player wants to sell us a vehicle. Auto-declines after 30s.
+lib.callback.register('asg:confirmSale', function(d)
+    local answered = false
+    CreateThread(function()
+        Wait(30000)
+        if not answered then pcall(lib.closeAlertDialog) end
+    end)
+    local answer = lib.alertDialog({
+        header = L('sale_title'), content = L('sale_text', d.seller, VehLabel(d.model), d.plate, d.price),
+        centered = true, cancel = true,
+    })
+    answered = true
+    return answer == 'confirm'
 end)

@@ -29,6 +29,23 @@ Config.MaxStorageDays = 7
 
 Config.WarpIntoVehicle = true
 
+-- Moving a vehicle between your garages
+Config.TransferFee = 100
+-- Player-to-player sales (set the price to 0 to gift a vehicle)
+Config.MaxSalePrice = 10000000
+
+-- Private / house garages
+Config.MaxPrivateGarages = 2   -- per player
+Config.MaxMembers = 5          -- people an owner can share a private garage with
+
+-- Logs shown in the admin editor are kept this many days
+Config.LogDays = 30
+
+-- UI. mode: 'dark' | 'light' (players can also toggle it in the UI). accent: any hex colour.
+Config.Theme = { mode = 'dark', accent = '#A594FF' }
+-- Game sounds for UI clicks
+Config.Sounds = true
+
 -- Ace permission for /asgarage (add_ace group.admin asgarages.admin allow)
 Config.AdminAce = 'asgarages.admin'
 
