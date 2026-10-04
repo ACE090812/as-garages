@@ -4,6 +4,30 @@ Modern garages and impound for FiveM. Works on **QBCore**, **Qbox** and **ESX** 
 
 > Status: v0.3.0. The code has been syntax-checked but **not yet tested on a live server**. Expect to tune coordinates and fix small things on first run.
 
+## Screenshots
+
+These are rendered from the real UI code with sample data. In the game the background is the world, and the 3D vehicle preview (drawn by the game) sits in the middle of the screen.
+
+![Garage screen in dark mode](docs/images/garage.jpg)
+
+| Light mode | Camera angles and folders |
+| --- | --- |
+| ![Garage screen in light mode](docs/images/garage-light.jpg) | ![Preview camera row and vehicle folders](docs/images/camera-folders.jpg) |
+
+| Vehicle history | Selling to a nearby player |
+| --- | --- |
+| ![Vehicle history window](docs/images/history.jpg) | ![Sell window](docs/images/sell.jpg) |
+
+![Impound lot](docs/images/impound.jpg)
+
+### Admin editor (`/asgarage`)
+
+![Garage editor](docs/images/admin-editor.jpg)
+
+| Stats | Tools |
+| --- | --- |
+| ![Stats dashboard](docs/images/admin-stats.jpg) | ![Admin tools](docs/images/admin-tools.jpg) |
+
 ## Requirements
 
 - [ox_lib](https://github.com/overextended/ox_lib)
