@@ -1,0 +1,43 @@
+fx_version 'cerulean'
+game 'gta5'
+lua54 'yes'
+
+name 'as-garages'
+author 'AS'
+version '0.1.0'
+description 'Modern garages and impound for QBCore, Qbox and ESX'
+
+shared_scripts {
+    '@ox_lib/init.lua',
+    'config.lua',
+    'locales/*.lua',
+    'shared.lua',
+}
+
+client_scripts {
+    'client/bridge.lua',
+    'client/preview.lua',
+    'client/main.lua',
+    'client/nui.lua',
+}
+
+server_scripts {
+    '@oxmysql/lib/MySQL.lua',
+    'server/bridge.lua',
+    'server/main.lua',
+    'server/impound.lua',
+    'server/admin.lua',
+}
+
+ui_page 'web/index.html'
+
+files {
+    'web/index.html',
+    'web/style.css',
+    'web/app.js',
+}
+
+dependencies {
+    'ox_lib',
+    'oxmysql',
+}
