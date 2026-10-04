@@ -39,10 +39,32 @@ A vehicle that is out and then disappears (deleted, server restart) is handled b
 | `MaxPrivateGarages` | Private garages one player can own |
 | `MaxMembers` | People an owner can share a private garage with |
 
+## Interaction (prompt, target, both)
+
+`Config.Interaction.mode`:
+
+- `'prompt'` shows the `[E]` text prompt (default).
+- `'target'` uses your target eye on foot. Storing a vehicle still uses the `[E]` prompt while you sit in it, because target eyes don't work from inside a vehicle.
+- `'both'` offers either.
+
+`Config.Interaction.target` picks `'auto'`, `'ox_target'` or `'qb-target'`. `options` sets the icon and label per kind (garage, impound, buy, interior). If the target resource isn't running, the script falls back to the prompt.
+
+## Delivery, abandoned vehicles, repairs, keys
+
+- `TransferDelay`: seconds a transferred vehicle takes to arrive. `0` (default) is instant. Vehicles in transit can't be taken out or sold until they arrive.
+- `Abandoned`: a vehicle with nobody in it and no player within `radius` for `minutes` is impounded (`action = 'impound'`, with `fee`) or returned to its garage (`action = 'garage'`).
+- `Repair`: `pricePerPercent` for each missing percent of engine plus body health. Repairs happen from the garage screen for stored vehicles.
+- `ShareKeys`: lend keys for `minutes`. Set `give` and `remove` for your keys resource. The vehicle must be out.
+- `Upgrades`: price, slots per purchase and the maximum extra slots for private garages.
+- `Fuel`: `get` and `set` hooks. Defaults cover `ox_fuel`, `LegacyFuel`, `cdn-fuel` and `ps-fuel`.
+- `Preview`: turntable and headlights defaults for the 3D preview. Players can toggle both in the UI.
+- `HistoryDays`: how long per-vehicle history is kept.
+
 ## UI
 
 - `Theme = { mode = 'dark' | 'light', accent = '#A594FF' }`. Players can also flip light/dark in the UI, and their choice is remembered on their machine. The accent can be any hex colour; text colours are chosen automatically for contrast.
 - `Sounds = true` plays the game's menu sounds. Set `false` to silence them.
+- Keyboard: arrow keys browse, Enter takes the main action, `1`-`6` switch preview camera, `F` favourites. A gamepad works where the game's browser exposes it (D-pad, A, B, bumpers).
 
 ## Logging
 
@@ -68,6 +90,7 @@ A vehicle that is out and then disappears (deleted, server restart) is handled b
     shared = true,                         -- job/gang: everyone in the group sees all stored vehicles
     price = 250000,                        -- private garages: price (no owner = for sale)
     vehicleClasses = { 'cars', 'bikes' },  -- optional filter: cars | bikes | boats | air
+    interior = { ... },                    -- optional walk-in interior, see INTERIORS.md
     blip = { sprite = 357, color = 3, scale = 0.7 },
 }
 ```

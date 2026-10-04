@@ -31,6 +31,8 @@ Config.WarpIntoVehicle = true
 
 -- Moving a vehicle between your garages
 Config.TransferFee = 100
+-- Seconds a transferred vehicle takes to arrive. 0 = instant (recommended). Set e.g. 120 for a 2 minute delivery.
+Config.TransferDelay = 0
 -- Player-to-player sales (set the price to 0 to gift a vehicle)
 Config.MaxSalePrice = 10000000
 
@@ -40,6 +42,72 @@ Config.MaxMembers = 5          -- people an owner can share a private garage wit
 
 -- Logs shown in the admin editor are kept this many days
 Config.LogDays = 30
+-- Per-vehicle history (sales, impounds, losses) is kept this many days
+Config.HistoryDays = 365
+
+-- Buy extra slots for a private garage
+Config.Upgrades = { enabled = true, price = 25000, slotsPer = 2, maxExtra = 10 }
+
+-- Vehicles left on the road with nobody in them and no player nearby.
+--   action: 'impound' (default lot, with `fee`) or 'garage' (back to the garage they came from)
+Config.Abandoned = { enabled = true, minutes = 30, radius = 75.0, action = 'impound', fee = 250 }
+
+-- Repair a stored vehicle from the garage screen. Price is per missing % of engine + body health.
+Config.Repair = { enabled = true, pricePerPercent = 15 }
+
+-- Lend keys to a nearby player for a while (the vehicle must be out). Hooks run on the SERVER.
+-- Defaults support qbx_vehiclekeys and qb-vehiclekeys. Replace them for any other keys resource.
+Config.ShareKeys = {
+    enabled = true, minutes = 30,
+    give = function(src, plate, entity)
+        if GetResourceState('qbx_vehiclekeys') == 'started' then
+            exports.qbx_vehiclekeys:GiveKeys(src, entity)
+        elseif GetResourceState('qb-vehiclekeys') == 'started' then
+            TriggerClientEvent('vehiclekeys:client:SetOwner', src, plate)
+        end
+    end,
+    remove = function(src, plate, entity)
+        if GetResourceState('qbx_vehiclekeys') == 'started' then
+            exports.qbx_vehiclekeys:RemoveKeys(src, entity)
+        end
+    end,
+}
+
+-- 3D preview. spin = slow turntable when idle, lights = headlights on.
+Config.Preview = { spin = true, spinSpeed = 14.0, lights = true }
+
+-- How players reach a garage.
+--   mode:   'prompt' = [E] text prompt, 'target' = target eye on foot (store prompt still uses [E] in a vehicle),
+--           'both' = either
+--   target: 'auto' | 'ox_target' | 'qb-target'
+--   options: icon + label per kind (ox_target / qb-target use Font Awesome icons)
+Config.Interaction = {
+    mode = 'prompt', target = 'auto', distance = 2.5,
+    options = {
+        garage = { icon = 'fa-solid fa-warehouse', label = 'Open garage' },
+        impound = { icon = 'fa-solid fa-truck-ramp-box', label = 'Open impound' },
+        buy = { icon = 'fa-solid fa-key', label = 'Buy garage' },
+        interior = { icon = 'fa-solid fa-door-open', label = 'Enter garage' },
+    },
+}
+
+-- Fuel resource hooks (client side). The defaults cover ox_fuel, LegacyFuel, cdn-fuel and ps-fuel.
+Config.Fuel = {
+    get = function(veh)
+        if GetResourceState('ox_fuel') == 'started' then return Entity(veh).state.fuel or GetVehicleFuelLevel(veh) end
+        for _, res in ipairs({ 'LegacyFuel', 'cdn-fuel', 'ps-fuel' }) do
+            if GetResourceState(res) == 'started' then return exports[res]:GetFuel(veh) end
+        end
+        return GetVehicleFuelLevel(veh)
+    end,
+    set = function(veh, level)
+        if GetResourceState('ox_fuel') == 'started' then Entity(veh).state.fuel = level return end
+        for _, res in ipairs({ 'LegacyFuel', 'cdn-fuel', 'ps-fuel' }) do
+            if GetResourceState(res) == 'started' then exports[res]:SetFuel(veh, level) return end
+        end
+        SetVehicleFuelLevel(veh, level + 0.0)
+    end,
+}
 
 -- UI. mode: 'dark' | 'light' (players can also toggle it in the UI). accent: any hex colour.
 Config.Theme = { mode = 'dark', accent = '#A594FF' }

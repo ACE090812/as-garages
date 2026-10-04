@@ -3,6 +3,8 @@ local Points, Blips = {}, {}
 local Current
 local lastPrompt
 local Km = {}
+local interact
+local TargetZones = {}
 
 function Notify(key, ...)
     lib.notify({ description = L(key, ...), type = 'inform' })
@@ -14,8 +16,28 @@ function VehLabel(model)
     return label ~= 'NULL' and label or tostring(model)
 end
 
+-- Target resource in use (ox_target / qb-target), or nil to use the [E] prompt only.
+local function targetResource()
+    local mode, want = Config.Interaction.mode, Config.Interaction.target
+    if mode ~= 'target' and mode ~= 'both' then return nil end
+    if (want == 'ox_target' or want == 'qb-target') then
+        return GetResourceState(want) == 'started' and want or nil
+    end
+    if GetResourceState('ox_target') == 'started' then return 'ox_target' end
+    if GetResourceState('qb-target') == 'started' then return 'qb-target' end
+end
+
+-- The [E] prompt is used in 'prompt'/'both' mode, when no target resource is running, and
+-- always while sitting in a vehicle (storing a vehicle is not a target interaction).
+local function promptWanted(g)
+    local mode = Config.Interaction.mode
+    if mode == 'prompt' or mode == 'both' or not targetResource() then return true end
+    return cache.vehicle and cache.seat == -1 and g.type ~= 'impound' and not g.forSale
+end
+
 local function promptFor(g)
     if g.forSale then return L('buy_garage', g.price or 0) end
+    if g.interior and not (cache.vehicle and cache.seat == -1) then return L('enter_garage') end
     if g.type == 'impound' then return L('open_impound') end
     if cache.vehicle and cache.seat == -1 then return L('store_vehicle') end
     return L('open_garage')
@@ -48,17 +70,61 @@ local function nearby(self)
     local c = self.garage.coords
     DrawMarker(27, c.x, c.y, c.z - 0.95, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.6, 1.6, 0.5,
         165, 148, 255, 150, false, false, 2, false, nil, nil, false)
-    local text = promptFor(self.garage)
+    local text = promptWanted(self.garage) and promptFor(self.garage) or nil
     if text ~= lastPrompt and not Open then
         lastPrompt = text
-        lib.showTextUI(text)
+        if text then lib.showTextUI(text) else lib.hideTextUI() end
     end
+end
+
+local function targetKind(g)
+    if g.forSale then return 'buy' end
+    if g.type == 'impound' then return 'impound' end
+    if g.interior then return 'interior' end
+    return 'garage'
+end
+
+local function addTargetZone(g)
+    local res = targetResource()
+    if not res then return end
+    local o = Config.Interaction.options[targetKind(g)]
+    local radius, dist = g.radius or 3.0, Config.Interaction.distance
+    if res == 'ox_target' then
+        TargetZones[g.id] = { res = res, id = exports.ox_target:addSphereZone({
+            coords = g.coords, radius = radius, debug = false,
+            options = {{
+                name = 'asg_' .. g.id, icon = o.icon, label = o.label, distance = dist,
+                canInteract = function() return not cache.vehicle and not Open end,
+                onSelect = function() interact(g) end,
+            }},
+        }) }
+    else
+        local name = 'asg_' .. g.id
+        exports['qb-target']:AddCircleZone(name, g.coords, radius, { name = name, debugPoly = false, useZ = true }, {
+            options = {{
+                icon = o.icon, label = o.label,
+                canInteract = function() return not cache.vehicle and not Open end,
+                action = function() interact(g) end,
+            }},
+            distance = dist,
+        })
+        TargetZones[g.id] = { res = res, id = name }
+    end
+end
+
+local function removeTargetZones()
+    for _, z in pairs(TargetZones) do
+        if z.res == 'ox_target' then pcall(function() exports.ox_target:removeZone(z.id) end)
+        else pcall(function() exports['qb-target']:RemoveZone(z.id) end) end
+    end
+    TargetZones = {}
 end
 
 function RefreshGarages()
     local list = lib.callback.await('asg:getGarages', false) or {}
     for _, p in pairs(Points) do p:remove() end
     for _, b in pairs(Blips) do RemoveBlip(b) end
+    removeTargetZones()
     Points, Blips, Garages, Current = {}, {}, {}, nil
     lib.hideTextUI()
     lastPrompt = nil
@@ -69,7 +135,15 @@ function RefreshGarages()
         for i, s in ipairs(g.spawns or {}) do spawns[i] = vec4(s.x, s.y, s.z, s.w) end
         g.spawns = spawns
         if g.preview then g.preview = vec4(g.preview.x, g.preview.y, g.preview.z, g.preview.w) end
+        if g.interior then
+            local i = g.interior
+            local bays = {}
+            for n, b in ipairs(i.bays or {}) do bays[n] = vec4(b.x, b.y, b.z, b.w) end
+            g.interior = { enter = vec4(i.enter.x, i.enter.y, i.enter.z, i.enter.w), exit = vec3(i.exit.x, i.exit.y, i.exit.z),
+                           bays = bays, ipl = i.ipl, entitySets = i.entitySets }
+        end
         Garages[g.id] = g
+        addTargetZone(g)
         Blips[g.id] = makeBlip(g)
         Points[g.id] = lib.points.new({
             coords = g.coords, distance = (g.radius or 3.0) + 1.0, garage = g,
@@ -105,6 +179,7 @@ function SpawnVehicle(p)
     SetEntityAsMissionEntity(veh, true, true)
     SetVehicleOnGroundProperly(veh)
     lib.setVehicleProperties(veh, p.props)
+    pcall(Config.Fuel.set, veh, p.props.fuelLevel or 100.0)
     SetModelAsNoLongerNeeded(model)
     if Config.WarpIntoVehicle then TaskWarpPedIntoVehicle(cache.ped, veh, -1) end
     Config.GiveKeys(veh, plate)
@@ -117,6 +192,8 @@ local function storeVehicle(g)
     if not veh or cache.seat ~= -1 then return end
     local netId = NetworkGetNetworkIdFromEntity(veh)
     local props = lib.getVehicleProperties(veh)
+    local okFuel, fuel = pcall(Config.Fuel.get, veh)
+    if okFuel and fuel then props.fuelLevel = fuel + 0.0 end
     local km = Km[veh] or 0
 
     TaskLeaveVehicle(cache.ped, veh, 0)
@@ -132,9 +209,11 @@ local function storeVehicle(g)
     end
 end
 
-local function interact(g)
+interact = function(g)
     if g.forSale then
         if not cache.vehicle then BuyGarage(g) end
+    elseif g.interior and g.type ~= 'impound' and not cache.vehicle then
+        EnterInterior(g)
     elseif g.type == 'impound' then
         if not cache.vehicle then OpenGarage(g) end
     elseif cache.vehicle and cache.seat == -1 then
@@ -149,7 +228,7 @@ lib.addKeybind({
     description = 'Garage: open / store',
     defaultKey = 'E',
     onPressed = function()
-        if Current and not Open then
+        if Current and not Open and promptWanted(Current) then
             lib.hideTextUI()
             lastPrompt = nil
             interact(Current)

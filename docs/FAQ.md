@@ -23,3 +23,17 @@
 **How do I add a language?** See "Translating" in [CONFIGURATION.md](CONFIGURATION.md).
 
 **Light mode?** Players can toggle it from the sun/moon button in the UI. Set the default with `Config.Theme.mode`.
+
+**Can I use ox_target or qb-target instead of the E prompt?** Yes. Set `Config.Interaction.mode` to `'target'` or `'both'`. See [CONFIGURATION.md](CONFIGURATION.md).
+
+**Can transfers take time?** Set `Config.TransferDelay` to a number of seconds. The default `0` is instant.
+
+**What happens to vehicles left on the road?** After `Config.Abandoned.minutes` with nobody in or near them they are impounded or returned to their garage. Change `Config.Abandoned.action` or turn it off.
+
+**Can players lend keys?** Yes, while the vehicle is out. Set the hooks in `Config.ShareKeys` for your keys resource.
+
+**How do I connect a housing script?** See [HOUSING.md](HOUSING.md).
+
+**How do I add an interior?** See [INTERIORS.md](INTERIORS.md).
+
+**Does it work with a controller?** Keyboard navigation always works. Gamepad input works where the game's browser exposes it; it may not on every build.

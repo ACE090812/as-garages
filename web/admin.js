@@ -5,11 +5,12 @@
 
   const TYPES = [['public', 'Public'], ['job', 'Job'], ['gang', 'Gang'], ['private', 'Private / house'], ['impound', 'Impound lot']];
   const CLASSES = [['cars', 'Cars'], ['bikes', 'Bikes'], ['boats', 'Boats'], ['air', 'Air']];
-  const S = { garages: [], sel: null, draft: null, tab: 'garages', msg: '', msgOk: true, vehicles: [], vq: '', logs: [], lq: '', saving: false };
+  const S = { garages: [], sel: null, draft: null, tab: 'garages', msg: '', msgOk: true, vehicles: [], vq: '', logs: [], lq: '', saving: false,
+    stats: null, dups: [], exportText: '', importText: '', toolDays: 30 };
 
   const clone = (o) => JSON.parse(JSON.stringify(o));
   const blank = () => ({ id: '', label: '', sub: '', type: 'public', slots: 10, radius: 3, price: 0, group: '', shared: false,
-    blipOn: true, vehicleClasses: [], coords: null, spawns: [], preview: null, isNew: true });
+    blipOn: true, vehicleClasses: [], coords: null, spawns: [], preview: null, interior: null, isNew: true });
   const fmt = (p) => (p ? `${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${p.z.toFixed(1)}${p.w !== undefined ? ` · ${Math.round(p.w)}°` : ''}` : 'Not placed');
   const say = (msg, ok = true) => { S.msg = msg || ''; S.msgOk = ok; };
 
@@ -32,6 +33,21 @@
     return `<div class="loc"><div><b>${esc(title)}</b><small>${esc(fmt(p))}</small></div>
       <div class="grp">${p ? `<button type="button" class="btn sm" ${attrs.goto}>Go</button>` : ''}
       <button type="button" class="btn sm" ${attrs.place}>${p ? 'Re-place' : 'Place'}</button>${extra}</div></div>`;
+  }
+
+  function interiorBlock(d) {
+    const i = d.interior;
+    let html = `<span class="lb" style="margin-top:8px">Walk-in interior <small style="text-transform:none;letter-spacing:0">(optional: MLO, IPL or any interior)</small></span>
+      <div class="chips">${chip(!!i, 'data-opt="interior"', 'Enable interior')}</div>`;
+    if (!i) return html;
+    const bays = i.bays.map((b, n) => locRow(`Showroom bay ${n + 1}`, b, { goto: `data-goto="ibay:${n}"`, place: `data-place="ibay:${n}"` },
+      `<button type="button" class="btn sm dng" data-rmbay="${n}" aria-label="Remove bay ${n + 1}">×</button>`)).join('');
+    html += locRow('Entry point (inside)', i.enter, { goto: 'data-goto="ienter"', place: 'data-place="ienter"' })
+      + locRow('Exit point', i.exit, { goto: 'data-goto="iexit"', place: 'data-place="iexit"' }) + bays
+      + `<button type="button" class="btn sm" data-addbay style="align-self:flex-start">+ Add showroom bay</button>
+         <div><label class="lb" for="f-ipl">IPL name (optional)</label><input id="f-ipl" class="fld" data-fi="ipl" type="text" value="${esc(i.ipl || '')}" placeholder="only if the interior needs an IPL"></div>`;
+    if (!i.enter) html += '<div class="note">Place the entry point or the interior will not be saved.</div>';
+    return html;
   }
 
   function garageForm() {
@@ -65,6 +81,7 @@
       <button type="button" class="btn sm" data-addspawn style="align-self:flex-start">+ Add spawn point</button>
       ${locRow('3D preview point', d.preview, { goto: 'data-goto="preview"', place: 'data-place="preview"' },
         d.preview ? '<button type="button" class="btn sm dng" data-clearpreview aria-label="Clear preview point">×</button>' : '')}
+      ${interiorBlock(d)}
       <div class="note">Placing: the editor hides, walk or drive to the spot, press <b>E</b> to confirm or <b>Backspace</b> to cancel.
         Sit in a vehicle to capture its heading (best for spawn bays). Boats and aircraft need their own bays on water or a helipad.</div>
     </div></div>`;
@@ -87,18 +104,56 @@
       ${rows || '<div class="empty">No log entries.</div>'}`;
   }
 
+  function statsView() {
+    const st = S.stats;
+    if (!st) return '<div class="empty">Loading…</div>';
+    const t = st.totals;
+    const tile = (label, n) => `<div class="tile"><small>${label}</small><b>${Number(n).toLocaleString()}</b></div>`;
+    const peak = Math.max(1, ...st.days.flatMap((d) => [d.takeouts, d.stores, d.impounds]));
+    const bar = (n, color, label) => `<i title="${label}: ${n}" style="height:${Math.max(2, Math.round((n / peak) * 120))}px;background:${color}"></i>`;
+    const chart = st.days.map((d) => `<div class="day"><div class="cols">${bar(d.takeouts, 'var(--accent)', 'Taken out')}${bar(d.stores, 'var(--ok)', 'Stored')}${bar(d.impounds, 'var(--bad)', 'Impounded')}</div><small>${esc(d.label)}</small></div>`).join('');
+    const revenue = st.revenue.length ? st.revenue.map((r) => `<tr><td>${esc(r.action)}</td><td>${r.count}</td><td>$${Number(r.total).toLocaleString()}</td></tr>`).join('')
+      : '<tr><td colspan="3" class="empty">No paid actions yet.</td></tr>';
+    const top = st.top.length ? st.top.map((g) => `<tr><td>${esc(g.garage)}</td><td>${g.count}</td></tr>`).join('') : '<tr><td colspan="2" class="empty">No activity yet.</td></tr>';
+    return `<div class="stats-grid">${tile('Vehicles tracked', t.vehicles)}${tile('Stored', t.stored)}${tile('Out', t.out)}${tile('Impounded', t.impounded)}${tile('Garages', t.garages)}</div>
+      <span class="lb">Last 7 days</span><div class="chart" role="img" aria-label="Take outs, stores and impounds per day">${chart}</div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>Taken out</span><span><i style="background:var(--ok)"></i>Stored</span><span><i style="background:var(--bad)"></i>Impounded</span></div>
+      <div class="ad-cols"><div class="ad-col"><span class="lb">Money moved, last 30 days</span><table class="tbl"><thead><tr><th>Action</th><th>Times</th><th>Total</th></tr></thead><tbody>${revenue}</tbody></table></div>
+      <div class="ad-col"><span class="lb">Busiest garages, last 30 days</span><table class="tbl"><thead><tr><th>Garage</th><th>Take outs + stores</th></tr></thead><tbody>${top}</tbody></table></div></div>`;
+  }
+
+  function toolsView() {
+    const opts = S.garages.filter((g) => g.type !== 'impound').map((g) => `<option value="${esc(g.id)}">${esc(g.label)}</option>`).join('');
+    const dups = S.dups.length ? `<table class="tbl"><thead><tr><th>Plate</th><th>Copies</th><th>Owners</th></tr></thead><tbody>${S.dups.map((d) => `<tr><td class="mono">${esc(d.plate)}</td><td>${d.count}</td><td>${esc(d.owners)}</td></tr>`).join('')}</tbody></table>` : '';
+    return `<div class="ad-cols"><div class="ad-col">
+        <div class="toolcard"><b>Return stuck vehicles</b><small>Puts every vehicle marked "out" that is not currently in the world back into its garage.</small><div class="toolrow"><button type="button" class="btn sm" data-tool="returnStuck" data-arm>Return stuck vehicles</button></div></div>
+        <div class="toolcard"><b>Move a whole garage</b><small>Moves every stored vehicle from one garage to another (slot limits are not enforced).</small>
+          <div class="toolrow"><select id="t-from" class="fld" aria-label="From">${opts}</select><select id="t-to" class="fld" aria-label="To">${opts}</select></div><div class="toolrow"><button type="button" class="btn sm" data-tool="moveGarage" data-arm>Move vehicles</button></div></div>
+        <div class="toolcard"><b>Release old impounds</b><small>Returns vehicles that have sat in the impound longer than this to the default garage.</small>
+          <div class="toolrow"><input id="t-days" class="fld" type="number" min="1" value="${S.toolDays}" aria-label="Days"><button type="button" class="btn sm" data-tool="releaseOldImpounds" data-arm>Release</button></div></div>
+        <div class="toolcard"><b>Duplicate plate scan</b><small>Finds plates that appear more than once in your vehicle table. Fix them in the database or with your dealership script.</small><div class="toolrow"><button type="button" class="btn sm" data-tool="scanDuplicates">Scan</button></div>${dups}</div>
+        <div class="toolcard"><b>Clean orphaned records</b><small>Removes garage records for vehicles that no longer exist.</small><div class="toolrow"><button type="button" class="btn sm" data-tool="cleanOrphans" data-arm>Clean</button></div></div>
+        <div class="toolcard"><b>Purge logs</b><small>Deletes log entries older than the number of days above (uses the same days field).</small><div class="toolrow"><button type="button" class="btn sm" data-tool="purgeLogs" data-arm>Purge logs</button></div></div>
+      </div><div class="ad-col">
+        <div class="toolcard"><b>Export garages</b><small>Copy this text to move your garages to another server or keep a backup. Owners and purchased upgrades are not included.</small>
+          <div class="toolrow"><button type="button" class="btn sm" data-export>Generate export</button></div><textarea class="fld big" id="t-export" readonly aria-label="Exported garages">${esc(S.exportText)}</textarea></div>
+        <div class="toolcard"><b>Import garages</b><small>Paste an export here. Garages with an id that already exists are overwritten.</small>
+          <textarea class="fld big" id="t-import" aria-label="Garages to import">${esc(S.importText)}</textarea><div class="toolrow"><button type="button" class="btn sm" data-import data-arm>Import</button></div></div>
+      </div></div>`;
+  }
+
   function render() {
     const keepScroll = root.querySelector('.ad-body')?.scrollTop || 0;
     const list = S.garages.map((g) => `<button type="button" class="gl${S.sel === g.id && S.draft && !S.draft.isNew ? ' on' : ''}" data-g="${esc(g.id)}">
       <b>${esc(g.label)}</b><small>${esc(g.type)} · ${g.slots} slots${g.override ? (g.inConfig ? ' · edited' : '') : ' · config.lua'}</small></button>`).join('');
     const d = S.draft;
     const canDelete = d && !d.isNew && d.override;
-    const body = S.tab === 'garages' ? garageForm() : S.tab === 'vehicles' ? vehiclesView() : logsView();
+    const body = S.tab === 'garages' ? garageForm() : S.tab === 'vehicles' ? vehiclesView() : S.tab === 'stats' ? statsView() : S.tab === 'tools' ? toolsView() : logsView();
 
     root.innerHTML = `<aside class="ad-side"><div class="hd" style="font-size:28px;font-weight:700;line-height:1">Garages</div>
         <button type="button" class="btn pri" data-new>+ New garage</button><div class="ad-list">${list}</div></aside>
       <section class="ad-main"><div class="ad-head"><div class="ad-tabs">
-          ${['garages', 'vehicles', 'logs'].map((t) => `<button type="button" class="seg${S.tab === t ? ' on' : ''}" data-tab="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</div>
+          ${['garages', 'vehicles', 'stats', 'tools', 'logs'].map((t) => `<button type="button" class="seg${S.tab === t ? ' on' : ''}" data-tab="${t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</div>
         <div style="display:flex;gap:10px;align-items:center">
           ${S.tab === 'garages' && d ? `${canDelete ? `<button type="button" class="btn dng" data-delete>${d.inConfig ? 'Reset to config' : 'Delete garage'}</button>` : ''}
             <button type="button" class="btn pri" data-save ${S.saving ? 'disabled' : ''}>${S.saving ? 'Saving…' : 'Save changes'}</button>` : ''}
@@ -114,11 +169,15 @@
     const d = S.draft;
     if (!d) return;
     const [kind, idx] = spec.split(':');
-    const label = kind === 'coords' ? 'interaction point' : kind === 'preview' ? 'preview point' : `spawn point ${Number(idx) + 1}`;
+    const names = { coords: 'interaction point', preview: 'preview point', ienter: 'interior entry point', iexit: 'interior exit point' };
+    const label = names[kind] || (kind === 'ibay' ? `showroom bay ${Number(idx) + 1}` : `spawn point ${Number(idx) + 1}`);
     const res = await post('adminPlace', { label });
     if (res.cancel) return;
     if (kind === 'coords') d.coords = { x: res.x, y: res.y, z: res.z };
     else if (kind === 'preview') d.preview = res;
+    else if (kind === 'ienter') d.interior.enter = res;
+    else if (kind === 'iexit') d.interior.exit = { x: res.x, y: res.y, z: res.z };
+    else if (kind === 'ibay') d.interior.bays[Number(idx)] = res;
     else d.spawns[Number(idx)] = res;
     render();
   }
@@ -126,7 +185,9 @@
   function goto(spec) {
     const d = S.draft;
     const [kind, idx] = spec.split(':');
-    const p = kind === 'coords' ? d.coords : kind === 'preview' ? d.preview : d.spawns[Number(idx)];
+    const p = kind === 'coords' ? d.coords : kind === 'preview' ? d.preview
+      : kind === 'ienter' ? d.interior?.enter : kind === 'iexit' ? d.interior?.exit
+      : kind === 'ibay' ? d.interior?.bays[Number(idx)] : d.spawns[Number(idx)];
     if (p) post('adminGoto', p);
   }
 
@@ -137,6 +198,7 @@
     const res = await post('adminSave', {
       id: d.id, label: d.label, sub: d.sub, type: d.type, slots: d.slots, radius: d.radius, price: d.price, group: d.group,
       shared: d.shared, blipOn: d.blipOn, vehicleClasses: d.vehicleClasses, coords: d.coords, spawns: d.spawns, preview: d.preview,
+      interior: d.interior,
     });
     S.saving = false;
     say(res.msg, !!res.ok);
@@ -165,6 +227,9 @@
     if (t.id === 'vq') { S.vq = t.value; debounce(async () => { S.vehicles = await post('adminVehicles', { query: S.vq }); const p = root.querySelector('.ad-body'); if (p) { const keep = t.selectionStart; render(); const el = root.querySelector('#vq'); el.focus(); el.setSelectionRange(keep, keep); } }); return; }
     if (t.id === 'lq') { S.lq = t.value; debounce(async () => { S.logs = await post('adminLogs', { query: S.lq }); const keep = t.selectionStart; render(); const el = root.querySelector('#lq'); el.focus(); el.setSelectionRange(keep, keep); }); return; }
     if (d && t.dataset.f) d[t.dataset.f] = t.hasAttribute('data-num') ? Number(t.value) : t.value;
+    if (d && d.interior && t.dataset.fi) d.interior[t.dataset.fi] = t.value;
+    if (t.id === 't-days') S.toolDays = Number(t.value) || 30;
+    if (t.id === 't-import') S.importText = t.value;
   });
 
   root.addEventListener('click', async (e) => {
@@ -176,7 +241,8 @@
     if ('close' in ds) { post('close'); return; }
     if (ds.tab) {
       sfx('select'); S.tab = ds.tab; say('');
-      if (ds.tab === 'vehicles') await loadVehicles(); else if (ds.tab === 'logs') await loadLogs(); else render();
+      if (ds.tab === 'vehicles') await loadVehicles(); else if (ds.tab === 'logs') await loadLogs();
+      else if (ds.tab === 'stats') { S.stats = null; render(); S.stats = await post('adminStats'); render(); } else render();
       return;
     }
     if (ds.g) { sfx('select'); S.tab = 'garages'; say(''); pickGarage(ds.g); render(); return; }
@@ -198,6 +264,26 @@
       render();
       return;
     }
+    if (ds.tool) {
+      if ('arm' in ds && !confirmTwice('tool:' + ds.tool, b, 'Click again to confirm')) return;
+      const args = { from: root.querySelector('#t-from')?.value, to: root.querySelector('#t-to')?.value, days: S.toolDays };
+      const res = await post('adminTool', { kind: ds.tool, args });
+      say(res.msg, !!res.ok);
+      S.dups = ds.tool === 'scanDuplicates' ? res.list || [] : S.dups;
+      if (['moveGarage', 'releaseOldImpounds'].includes(ds.tool)) await reload();
+      render();
+      return;
+    }
+    if ('export' in ds) { const res = await post('adminExport'); S.exportText = res.text || ''; say(S.exportText ? 'Export ready. Select the text and copy it.' : 'Nothing to export.', !!S.exportText); render(); return; }
+    if ('import' in ds) {
+      if (!confirmTwice('import', b, 'Click again to import')) return;
+      const text = root.querySelector('#t-import')?.value || '';
+      const res = await post('adminImport', { text });
+      say(res.msg, !!res.ok);
+      if (res.ok) { S.importText = ''; await reload(); }
+      render();
+      return;
+    }
     if (ds.force) {
       const garage = root.querySelector('#vgarage')?.value;
       const res = await post('adminForce', { plate: ds.force, garage });
@@ -208,7 +294,10 @@
     if (!d) return;
     if (ds.type) { d.type = ds.type; if (d.type === 'private') d.shared = true; render(); }
     else if (ds.class) { const i = d.vehicleClasses.indexOf(ds.class); if (i >= 0) d.vehicleClasses.splice(i, 1); else d.vehicleClasses.push(ds.class); render(); }
+    else if (ds.opt === 'interior') { d.interior = d.interior ? null : { enter: null, exit: null, bays: [], ipl: '' }; render(); }
     else if (ds.opt) { d[ds.opt] = !d[ds.opt]; render(); }
+    else if ('addbay' in ds) { await place(`ibay:${d.interior.bays.length}`); }
+    else if (ds.rmbay !== undefined) { d.interior.bays.splice(Number(ds.rmbay), 1); render(); }
     else if ('addspawn' in ds) { await place(`spawn:${d.spawns.length}`); }
     else if (ds.rmspawn !== undefined) { d.spawns.splice(Number(ds.rmspawn), 1); render(); }
     else if ('clearpreview' in ds) { d.preview = null; render(); }

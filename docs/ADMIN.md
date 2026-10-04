@@ -18,11 +18,31 @@ The left list shows every garage. A tag says if it comes from `config.lua` or ha
 
 Create a garage with type **Private / house** and a price. It shows a green blip and a "Buy garage" prompt until someone buys it. The owner can add and remove members (nearby players) from the garage screen with **Manage access**.
 
-In the editor you can **Clear owner** to put it back on sale. For housing scripts, use the exports in [EXPORTS.md](EXPORTS.md) to set the owner and members when a property is bought.
+Owners can buy extra slots from the garage screen (`Config.Upgrades`). In the editor you can **Clear owner** to put it back on sale. For housing scripts, use the exports in [API.md](API.md) to set the owner and members when a property is bought.
+
+## Walk-in interiors
+
+Optional per garage: an entry point, exit point and showroom bays inside any interior you have. See [INTERIORS.md](INTERIORS.md).
 
 ## Vehicles tab
 
 Search by plate or owner id. It shows the owner, state (stored, out, impounded) and garage. **Return to garage** puts the vehicle in the chosen garage and removes it from the world if it is out. Useful for stuck or lost vehicles.
+
+## Stats tab
+
+Totals (vehicles tracked, stored, out, impounded, garages), a 7-day chart of take outs, stores and impounds, the money moved in the last 30 days by action (impound fees, transfers, repairs, sales, garage purchases and upgrades), and the busiest garages.
+
+## Tools tab
+
+- **Return stuck vehicles**: everything marked "out" that is not currently in the world goes back to its garage.
+- **Move a whole garage**: move every stored vehicle from one garage to another.
+- **Release old impounds**: send vehicles that have sat in the impound for N days to the default garage.
+- **Duplicate plate scan**: lists plates that appear more than once in your vehicle table, with their owners.
+- **Clean orphaned records**: removes garage records whose vehicle no longer exists.
+- **Purge logs**: delete log entries older than N days.
+- **Export / Import**: copy your garages as text (no owners or purchased upgrades) and paste them into another server. Existing ids are overwritten.
+
+Destructive buttons ask for a second click.
 
 ## Logs tab
 

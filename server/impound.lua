@@ -2,6 +2,27 @@ lib.callback.register('asg:canImpound', function(src)
     return IsOfficer(Bridge.getPlayer(src))
 end)
 
+local function pct(n, scale) return math.min(100, math.max(0, math.floor((n or scale) / (scale / 100)))) end
+
+-- Writes the impound record. Used by officers (/impound) and by the ImpoundVehicle export.
+-- info = { lot, reason, fee, holdMin, ownerRelease (bool), by }
+function DoImpound(plate, props, info)
+    local now = os.time()
+    props = props or {}
+    MySQL.update.await([[INSERT INTO as_garage_vehicles
+        (plate, garage, state, fuel, engine, body, impound_reason, impound_by, impound_fee, impound_at, impound_until, owner_release)
+        VALUES (?, ?, 2, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE garage = VALUES(garage), state = 2, fuel = VALUES(fuel), engine = VALUES(engine),
+        body = VALUES(body), impound_reason = VALUES(impound_reason), impound_by = VALUES(impound_by),
+        impound_fee = VALUES(impound_fee), impound_at = VALUES(impound_at), impound_until = VALUES(impound_until),
+        owner_release = VALUES(owner_release), transit_to = NULL, transit_at = 0]], {
+        plate, info.lot, pct(props.fuelLevel, 100), pct(props.engineHealth, 1000), pct(props.bodyHealth, 1000),
+        info.reason, info.by, info.fee, now, now + info.holdMin * 60, info.ownerRelease and 1 or 0,
+    })
+    Bridge.setNative(plate, false, info.lot)
+    History(plate, 'impounded', ('%s: %s'):format(info.by, info.reason ~= '' and info.reason or '-'))
+end
+
 -- Officer impounds the vehicle in front of them.
 lib.callback.register('asg:impound', function(src, netId, data, props)
     local p = Bridge.getPlayer(src)
@@ -14,11 +35,10 @@ lib.callback.register('asg:impound', function(src, netId, data, props)
 
     local rawPlate = GetVehicleNumberPlateText(entity)
     local plate = NormPlate(rawPlate)
-    local reason = tostring(data.reason or ''):sub(1, 200)
     local fee = math.min(math.max(math.floor(tonumber(data.fee) or 0), 0), Config.MaxImpoundFee)
     local holdMin = math.min(math.max(math.floor(tonumber(data.hold) or 0), 0), 10080)
-    local ownerRelease = data.ownerRelease ~= false and 1 or 0
     local lot = Garages[data.lot] and Garages[data.lot].type == 'impound' and data.lot or Config.DefaultImpound
+    local reason = tostring(data.reason or ''):sub(1, 200)
 
     local v = Bridge.getVehicle(plate)
     Spawned[plate] = nil
@@ -35,23 +55,13 @@ lib.callback.register('asg:impound', function(src, netId, data, props)
         props = v.props
     end
 
-    local now = os.time()
-    MySQL.update.await([[INSERT INTO as_garage_vehicles
-        (plate, garage, state, fuel, engine, body, impound_reason, impound_by, impound_fee, impound_at, impound_until, owner_release)
-        VALUES (?, ?, 2, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE garage = VALUES(garage), state = 2, fuel = VALUES(fuel), engine = VALUES(engine),
-        body = VALUES(body), impound_reason = VALUES(impound_reason), impound_by = VALUES(impound_by),
-        impound_fee = VALUES(impound_fee), impound_at = VALUES(impound_at), impound_until = VALUES(impound_until),
-        owner_release = VALUES(owner_release)]], {
-        plate, lot,
-        math.min(100, math.max(0, math.floor(props.fuelLevel or 100))),
-        math.min(100, math.max(0, math.floor((props.engineHealth or 1000) / 10))),
-        math.min(100, math.max(0, math.floor((props.bodyHealth or 1000) / 10))),
-        reason, ('%s (%s)'):format(p.name, p.job), fee, now, now + holdMin * 60, ownerRelease,
+    DoImpound(plate, props, {
+        lot = lot, reason = reason, fee = fee, holdMin = holdMin, ownerRelease = data.ownerRelease ~= false,
+        by = ('%s (%s)'):format(p.name, p.job),
     })
-    Bridge.setNative(plate, false, lot)
     DeleteEntity(entity)
-    Log('Vehicle impounded', ('%s (%s) impounded %s | fee $%s | hold %s min | %s'):format(p.name, p.id, plate, fee, holdMin, reason))
+    Log('Vehicle impounded', ('%s (%s) impounded %s | fee $%s | hold %s min | %s'):format(p.name, p.id, plate, fee, holdMin, reason), plate, lot)
+    Emit('vehicleImpounded', src, plate, lot, fee)
     return true, 'impounded_ok', plate
 end)
 
@@ -95,7 +105,9 @@ lib.callback.register('asg:retrieve', function(src, lotId, plate, bay)
 
     Reserve(src, plate, 2, g.id)
     Pending[plate].paid = total
+    History(plate, 'retrieved', total > 0 and ('Paid $%s'):format(total) or (officer and 'Released by an officer' or 'Released'))
     Log('Vehicle retrieved from impound', ('%s (%s) retrieved %s from %s | paid $%s%s'):format(
-        p.name, p.id, plate, g.label, total, officer and ' (officer release)' or ''))
+        p.name, p.id, plate, g.label, total, officer and ' (officer release)' or ''), plate, g.id, total)
+    Emit('vehicleRetrieved', src, plate, g.id, total)
     return true, { model = v.model, props = v.props, spawn = spawn, plate = plate, fee = total }
 end)
