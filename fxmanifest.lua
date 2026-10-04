@@ -4,7 +4,7 @@ lua54 'yes'
 
 name 'as-garages'
 author 'AS'
-version '0.2.0'
+version '0.3.0'
 description 'Modern garages and impound for QBCore, Qbox and ESX'
 
 shared_scripts {
@@ -19,6 +19,7 @@ client_scripts {
     'client/preview.lua',
     'client/main.lua',
     'client/nui.lua',
+    'client/interior.lua',
     'client/admin.lua',
 }
 
@@ -29,6 +30,8 @@ server_scripts {
     'server/impound.lua',
     'server/vehicles.lua',
     'server/private.lua',
+    'server/interior.lua',
+    'server/api.lua',
     'server/admin.lua',
 }
 

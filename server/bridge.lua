@@ -177,3 +177,30 @@ function Bridge.setOwner(plate, newOwnerId, newOwnerSrc)
             { newOwnerId, license, plate })
     end
 end
+
+-- Maintenance helpers for the admin tools --------------------------------------------------
+
+-- Plates that appear more than once in the framework's vehicle table (compared trimmed, upper-case).
+function Bridge.findDuplicatePlates()
+    local rows
+    if fw == 'esx' then
+        rows = MySQL.query.await([[SELECT UPPER(TRIM(plate)) AS p, COUNT(*) AS c, GROUP_CONCAT(owner SEPARATOR ', ') AS owners
+            FROM owned_vehicles GROUP BY p HAVING c > 1 LIMIT 100]])
+    else
+        rows = MySQL.query.await([[SELECT UPPER(TRIM(plate)) AS p, COUNT(*) AS c, GROUP_CONCAT(citizenid SEPARATOR ', ') AS owners
+            FROM player_vehicles GROUP BY p HAVING c > 1 LIMIT 100]])
+    end
+    local out = {}
+    for i, r in ipairs(rows or {}) do out[i] = { plate = r.p, count = r.c, owners = r.owners } end
+    return out
+end
+
+-- Removes garage records whose vehicle no longer exists in the framework table. Returns how many.
+function Bridge.cleanOrphans()
+    if fw == 'esx' then
+        return MySQL.update.await([[DELETE v FROM as_garage_vehicles v LEFT JOIN owned_vehicles o ON UPPER(TRIM(o.plate)) = v.plate
+            WHERE o.plate IS NULL]])
+    end
+    return MySQL.update.await([[DELETE v FROM as_garage_vehicles v LEFT JOIN player_vehicles o ON UPPER(TRIM(o.plate)) = v.plate
+        WHERE o.plate IS NULL]])
+end

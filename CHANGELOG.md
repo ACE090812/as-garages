@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.0
+
+- Walk-in garage interiors with a parked-car showroom (any MLO or IPL), in their own routing bucket.
+- Target-eye interaction (`ox_target`, `qb-target`, or the `[E]` prompt, or both) with per-kind icons and labels.
+- Preview camera modes (front, side, rear, cabin, engine bay, wheel), an optional turntable and headlights.
+- Plates are drawn in the vehicle's real plate style. Folders for organising vehicles. Per-vehicle history.
+- Lend keys to a nearby player for a set time. Repair stored vehicles from the garage screen. Fuel resource hooks.
+- Garage upgrades (extra slots) for private garages.
+- Optional delayed transfers (`Config.TransferDelay`, instant by default).
+- Abandoned vehicles are impounded or returned to their garage (configurable).
+- Admin: stats dashboard, bulk tools, duplicate plate scanner, orphan cleanup, garage export and import.
+- Temporary garage API for housing scripts, more exports (`GetGarages`, `ImpoundVehicle`, `SetVehicleCondition`, ...) and server events. See `docs/API.md`.
+- Keyboard navigation and best-effort gamepad support in the UI.
+
 ## 0.2.0
 
 - Transfer a vehicle between your garages (`Config.TransferFee`), rename it with a nickname, and sell or gift it to a nearby player with a buyer confirmation.

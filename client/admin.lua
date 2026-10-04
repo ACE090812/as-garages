@@ -76,3 +76,19 @@ RegisterNUICallback('adminPlace', function(body, cb)
     SendNUIMessage({ action = 'show' })
     cb(result or { cancel = true })
 end)
+
+RegisterNUICallback('adminStats', function(_, cb) cb(call('asg:admin:stats') or {}) end)
+
+RegisterNUICallback('adminTool', function(body, cb)
+    local ok, msg, list = call('asg:admin:tool', body.kind, body.args)
+    cb({ ok = ok, msg = msg, list = list })
+    if ok and (body.kind == 'moveGarage' or body.kind == 'releaseOldImpounds') then RefreshGarages() end
+end)
+
+RegisterNUICallback('adminExport', function(_, cb) cb({ text = call('asg:admin:export') or '' }) end)
+
+RegisterNUICallback('adminImport', function(body, cb)
+    local ok, msg = call('asg:admin:import', body.text)
+    cb({ ok = ok, msg = msg })
+    if ok then RefreshGarages() end
+end)
