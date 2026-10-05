@@ -152,7 +152,7 @@ Config.Classes = {
 Config.Garages = {
     {
         id = 'legion_square', label = 'Legion Square', sub = 'Public garage · Vinewood',
-        type = 'public', coords = vec3(215.8, -810.1, 30.7), radius = 3.0, slots = 10,
+        type = 'public', coords = vec3(215.8, -810.1, 30.7), radius = 3.0, slots = 40,
         spawns = { vec4(222.1, -804.6, 30.0, 248.0), vec4(224.9, -801.3, 30.0, 248.0) },
         blip = { sprite = 357, color = 3, scale = 0.7 },
     },

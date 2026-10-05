@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+- Fix black boxes in the UI on FiveM browser builds that render `backdrop-filter` as solid black. All blur was removed and panels are slightly more opaque.
+- The 3D preview falls back to the garage's first bay when no preview point is set.
+- The default Legion Square garage now has 40 slots, so a server with many existing vehicles doesn't show "11 of 10".
+
 ## 0.3.0
 
 - Walk-in garage interiors with a parked-car showroom (any MLO or IPL), in their own routing bucket.

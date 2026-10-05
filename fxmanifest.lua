@@ -4,7 +4,7 @@ lua54 'yes'
 
 name 'as-garages'
 author 'AS'
-version '0.3.0'
+version '0.3.1'
 description 'Modern garages and impound for QBCore, Qbox and ESX'
 
 shared_scripts {

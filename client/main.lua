@@ -135,6 +135,8 @@ function RefreshGarages()
         for i, s in ipairs(g.spawns or {}) do spawns[i] = vec4(s.x, s.y, s.z, s.w) end
         g.spawns = spawns
         if g.preview then g.preview = vec4(g.preview.x, g.preview.y, g.preview.z, g.preview.w) end
+        -- No preview point set? Show the preview car on the first bay so the 3D preview still works.
+        if not g.preview and g.spawns[1] then g.preview = g.spawns[1] end
         if g.interior then
             local i = g.interior
             local bays = {}
