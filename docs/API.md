@@ -47,8 +47,8 @@ end)
 
 | Hook | Where | Purpose |
 | --- | --- | --- |
-| `Config.GiveKeys(vehicle, plate)` | client | Give keys when a vehicle is taken out |
-| `Config.ShareKeys.give / remove(src, plate, entity)` | server | Lend and take back keys |
+| `Config.Keys` | server (+ client for client-only scripts) | Connect your keys resource. See [KEYS.md](KEYS.md) |
+| `Config.GiveKeys(vehicle, plate)` | client | Optional extra code after a vehicle spawns |
 | `Config.Fuel.get / set(vehicle, level)` | client | Read and write fuel |
 | `Config.Repair.onRepair(src, plate)` | server | Optional, runs after a paid repair |
 

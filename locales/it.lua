@@ -139,4 +139,5 @@ Locales.it = {
     upgrade_now = "Posti ora",
     upgrade_after = "Posti dopo",
     upgrade_confirm = "Compra potenziamento",
+    keys_required = "Ti servono le chiavi per parcheggiare questo veicolo.",
 }

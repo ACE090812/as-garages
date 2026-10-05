@@ -413,6 +413,15 @@ lib.callback.register('asg:spawned', function(src, plate, netId)
     if not pend or pend.src ~= src then return false end
     Pending[plate] = nil
     Spawned[plate] = { netId = netId, src = src, garage = pend.garage, misses = 0 }
+
+    -- The client has just created the vehicle: wait briefly for it to exist on the server, then give keys.
+    local entity = NetworkGetEntityFromNetworkId(netId)
+    for _ = 1, 20 do
+        if entity and entity ~= 0 and DoesEntityExist(entity) then break end
+        Wait(100)
+        entity = NetworkGetEntityFromNetworkId(netId)
+    end
+    Keys.give(src, plate, (entity and entity ~= 0 and DoesEntityExist(entity)) and entity or nil)
     return true
 end)
 
@@ -447,6 +456,7 @@ lib.callback.register('asg:store', function(src, garageId, netId, props, km)
     local v = Bridge.getVehicle(plate)
     if not v then return false, 'invalid_vehicle' end
     if v.owner ~= p.id then return false, 'not_owner' end
+    if Config.Keys.requireKeysToStore and not Keys.has(src, plate, entity) then return false, 'keys_required' end
 
     Locks[plate] = true
     local row = MySQL.single.await('SELECT state, garage FROM as_garage_vehicles WHERE plate = ?', { plate })
@@ -478,6 +488,7 @@ lib.callback.register('asg:store', function(src, garageId, netId, props, km)
     })
     Bridge.setNative(plate, true, g.id)
     Spawned[plate] = nil
+    if Config.Keys.removeOnStore then Keys.remove(src, plate, entity) end
     DeleteEntity(entity)
     Locks[plate] = nil
     Log('Vehicle stored', ('%s (%s) stored %s in %s'):format(p.name, p.id, plate, g.label), plate, g.id)

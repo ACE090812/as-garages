@@ -34,7 +34,9 @@
 
 **What happens to vehicles left on the road?** After `Config.Abandoned.minutes` with nobody in or near them they are impounded or returned to their garage. Change `Config.Abandoned.action` or turn it off.
 
-**Can players lend keys?** Yes, while the vehicle is out. Set the hooks in `Config.ShareKeys` for your keys resource.
+**Does it work with my keys script?** Built in: `qbx_vehiclekeys`, `qb-vehiclekeys`, `Renewed-Vehiclekeys` and ox_inventory item keys. For any other script use `Config.Keys.resource = 'custom'`. See [KEYS.md](KEYS.md).
+
+**Can players lend keys?** Yes, while the vehicle is out. It uses the same `Config.Keys` setup.
 
 **How do I connect a housing script?** See [HOUSING.md](HOUSING.md).
 

@@ -139,4 +139,5 @@ Locales.fr = {
     upgrade_now = "Places actuelles",
     upgrade_after = "Places après",
     upgrade_confirm = "Acheter l'amélioration",
+    keys_required = "Il vous faut les clés pour ranger ce véhicule.",
 }

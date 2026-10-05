@@ -182,12 +182,12 @@ lib.callback.register('asg:shareKeys', function(src, plate, targetSrc)
     local entity = s and NetworkGetEntityFromNetworkId(s.netId)
     if not entity or entity == 0 or not DoesEntityExist(entity) then return false, 'keys_need_out' end
 
-    cfg.give(targetSrc, plate, entity)
+    Keys.give(targetSrc, plate, entity)
     Bridge.notify(targetSrc, L('keys_received', plate, cfg.minutes), 'success')
     SetTimeout(cfg.minutes * 60000, function()
         local still = Spawned[plate]
         local e = still and NetworkGetEntityFromNetworkId(still.netId)
-        pcall(cfg.remove, targetSrc, plate, e or entity)
+        Keys.remove(targetSrc, plate, e or entity)
         Bridge.notify(targetSrc, L('keys_expired', plate), 'inform')
     end)
     Log('Keys shared', ('%s (%s) lent keys for %s to %s (%s) for %s min'):format(p.name, p.id, plate, t.name, t.id, cfg.minutes), plate)

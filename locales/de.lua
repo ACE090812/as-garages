@@ -139,4 +139,5 @@ Locales.de = {
     upgrade_now = "Plätze jetzt",
     upgrade_after = "Plätze danach",
     upgrade_confirm = "Ausbau kaufen",
+    keys_required = "Du brauchst die Schlüssel, um dieses Fahrzeug einzuparken.",
 }

@@ -139,4 +139,5 @@ Locales.pt = {
     upgrade_now = "Vagas agora",
     upgrade_after = "Vagas depois",
     upgrade_confirm = "Comprar melhoria",
+    keys_required = "Você precisa das chaves para guardar este veículo.",
 }

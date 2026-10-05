@@ -54,7 +54,7 @@ A vehicle that is out and then disappears (deleted, server restart) is handled b
 - `TransferDelay`: seconds a transferred vehicle takes to arrive. `0` (default) is instant. Vehicles in transit can't be taken out or sold until they arrive.
 - `Abandoned`: a vehicle with nobody in it and no player within `radius` for `minutes` is impounded (`action = 'impound'`, with `fee`) or returned to its garage (`action = 'garage'`).
 - `Repair`: `pricePerPercent` for each missing percent of engine plus body health. Repairs happen from the garage screen for stored vehicles.
-- `ShareKeys`: lend keys for `minutes`. Set `give` and `remove` for your keys resource. The vehicle must be out.
+- `ShareKeys`: lend keys for `minutes` through `Config.Keys` (see [KEYS.md](KEYS.md)). The vehicle must be out.
 - `Upgrades`: price, slots per purchase and the maximum extra slots for private garages.
 - `Fuel`: `get` and `set` hooks. Defaults cover `ox_fuel`, `LegacyFuel`, `cdn-fuel` and `ps-fuel`.
 - `Preview`: turntable and headlights defaults for the 3D preview. Players can toggle both in the UI.
@@ -74,7 +74,7 @@ A vehicle that is out and then disappears (deleted, server restart) is handled b
 
 ## Keys
 
-`GiveKeys(vehicle, plate)` runs on the client after a vehicle spawns. The default handles `qbx_vehiclekeys` and `qb-vehiclekeys`. Replace it for any other keys resource.
+`Config.Keys` connects your keys resource (qbx_vehiclekeys, qb-vehiclekeys, Renewed-Vehiclekeys, ox_inventory item keys, or your own script). See [KEYS.md](KEYS.md).
 
 ## Defining garages in `config.lua`
 
