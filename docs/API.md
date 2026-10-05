@@ -52,6 +52,13 @@ end)
 | `Config.Fuel.get / set(vehicle, level)` | client | Read and write fuel |
 | `Config.Repair.onRepair(src, plate)` | server | Optional, runs after a paid repair |
 
+## Client event and state
+
+| Name | Purpose |
+| --- | --- |
+| `as-garages:client:hudToggled` (`hidden`) | Fired when a garage screen opens (`true`) or closes (`false`). Listen to it in your HUD to hide and show it. |
+| `LocalPlayer.state['asg:uiOpen']` | `true` while a garage screen is open. |
+
 ## Database
 
 Public tables: `as_garage_vehicles` (state of each vehicle), `as_garage_locations` (garages saved in game), `as_garage_access` (private garage members), `as_garage_logs` (activity) and `as_garage_history` (per-vehicle history). Read them freely. Prefer the exports for writing.

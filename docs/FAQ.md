@@ -41,3 +41,5 @@
 **How do I add an interior?** See [INTERIORS.md](INTERIORS.md).
 
 **Does it work with a controller?** Keyboard navigation always works. Gamepad input works where the game's browser exposes it; it may not on every build.
+
+**My custom HUD stays on screen in the garage.** The radar and default HUD hide automatically. For a custom HUD, set `Config.HideHud.hook` (see [CONFIGURATION.md](CONFIGURATION.md)), or listen to the `as-garages:client:hudToggled` event from the HUD resource.
