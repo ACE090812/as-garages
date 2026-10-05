@@ -3,7 +3,7 @@
 as-garages talks to your keys resource in three places:
 
 1. **Taking a vehicle out or retrieving it from the impound** gives the player keys.
-2. **Storing** can require the keys (`requireKeysToStore`) and can take them away again (`removeOnStore`).
+2. **Storing** can require the keys (`requireKeysToStore`) and can take them away again (`removeOnStore`, automatic for as-vehiclekeys).
 3. **Lending keys** to a nearby player (while the vehicle is out) gives them keys, and takes them back after `Config.ShareKeys.minutes`.
 
 All of it goes through `Config.Keys` in `config.lua`.
@@ -12,7 +12,8 @@ All of it goes through `Config.Keys` in `config.lua`.
 
 | `Config.Keys.resource` | How it works |
 | --- | --- |
-| `'auto'` (default) | Uses the first of `qbx_vehiclekeys`, `qb-vehiclekeys`, `Renewed-Vehiclekeys` that is running |
+| `'auto'` (default) | Uses the first of `as-vehiclekeys`, `qbx_vehiclekeys`, `qb-vehiclekeys`, `Renewed-Vehiclekeys` that is running |
+| `'as-vehiclekeys'` | Item-based keys. Uses its server exports `GiveKey`, `TakeKey` and `HasKey`. The key is handed back when a vehicle is taken out and taken again when it is stored (`removeOnStore` is automatic). Lent keys really expire. The doors are unlocked after a vehicle spawns |
 | `'qbx_vehiclekeys'` | Server exports `GiveKeys`, `RemoveKeys`, `HasKeys` |
 | `'qb-vehiclekeys'` | Triggers `vehiclekeys:client:SetOwner`. It cannot take keys back or check them, so lending keys can't expire and `requireKeysToStore` has no effect |
 | `'Renewed-Vehiclekeys'` | Client exports `addKey` / `removeKey` |
@@ -55,3 +56,9 @@ Config.Keys = {
 ## Lending keys
 
 `Config.ShareKeys = { enabled = true, minutes = 30 }`. The vehicle has to be out in the world. After the time is up, `remove` runs for the player who was lent the keys. With a script that can't remove keys, the borrower keeps them.
+
+## as-vehiclekeys notes
+
+- Don't call `GiveKey` / `TakeKey` from anywhere else for garage events. as-garages does it for you, so you would get double calls.
+- A vehicle that someone only hotwired or lockpicked has "session access" and no key item. With `requireKeysToStore = true` that player can't store it. Leave it `false` if you want hotwired cars storable.
+- The key is given a moment after the vehicle spawns, so there can be a split second where a keyless engine is off.

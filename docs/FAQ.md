@@ -34,7 +34,7 @@
 
 **What happens to vehicles left on the road?** After `Config.Abandoned.minutes` with nobody in or near them they are impounded or returned to their garage. Change `Config.Abandoned.action` or turn it off.
 
-**Does it work with my keys script?** Built in: `qbx_vehiclekeys`, `qb-vehiclekeys`, `Renewed-Vehiclekeys` and ox_inventory item keys. For any other script use `Config.Keys.resource = 'custom'`. See [KEYS.md](KEYS.md).
+**Does it work with my keys script?** Built in: `as-vehiclekeys`, `qbx_vehiclekeys`, `qb-vehiclekeys`, `Renewed-Vehiclekeys` and ox_inventory item keys. For any other script use `Config.Keys.resource = 'custom'`. See [KEYS.md](KEYS.md).
 
 **Can players lend keys?** Yes, while the vehicle is out. It uses the same `Config.Keys` setup.
 
@@ -44,4 +44,4 @@
 
 **Does it work with a controller?** Keyboard navigation always works. Gamepad input works where the game's browser exposes it; it may not on every build.
 
-**My custom HUD stays on screen in the garage.** The radar and default HUD hide automatically. For a custom HUD, set `Config.HideHud.hook` (see [CONFIGURATION.md](CONFIGURATION.md)), or listen to the `as-garages:client:hudToggled` event from the HUD resource.
+**My custom HUD stays on screen in the garage.** The radar and default HUD hide automatically, and `as-hud` is handled for you. For another HUD, set `Config.HideHud.hook` (see [CONFIGURATION.md](CONFIGURATION.md)), or listen to the `as-garages:client:hudToggled` event from the HUD resource.

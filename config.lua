@@ -76,18 +76,18 @@ Config.Interaction = {
     },
 }
 
--- Fuel resource hooks (client side). The defaults cover ox_fuel, LegacyFuel, cdn-fuel and ps-fuel.
+-- Fuel resource hooks (client side). The defaults cover as-fuel, ox_fuel, LegacyFuel, cdn-fuel and ps-fuel.
 Config.Fuel = {
     get = function(veh)
         if GetResourceState('ox_fuel') == 'started' then return Entity(veh).state.fuel or GetVehicleFuelLevel(veh) end
-        for _, res in ipairs({ 'LegacyFuel', 'cdn-fuel', 'ps-fuel' }) do
+        for _, res in ipairs({ 'as-fuel', 'LegacyFuel', 'cdn-fuel', 'ps-fuel' }) do
             if GetResourceState(res) == 'started' then return exports[res]:GetFuel(veh) end
         end
         return GetVehicleFuelLevel(veh)
     end,
     set = function(veh, level)
         if GetResourceState('ox_fuel') == 'started' then Entity(veh).state.fuel = level return end
-        for _, res in ipairs({ 'LegacyFuel', 'cdn-fuel', 'ps-fuel' }) do
+        for _, res in ipairs({ 'as-fuel', 'LegacyFuel', 'cdn-fuel', 'ps-fuel' }) do
             if GetResourceState(res) == 'started' then exports[res]:SetFuel(veh, level) return end
         end
         SetVehicleFuelLevel(veh, level + 0.0)
@@ -107,7 +107,11 @@ Config.Sounds = true
 Config.HideHud = {
     enabled = true,
     hook = function(hidden)
-        -- Examples (uncomment and adjust for the HUD you use):
+        -- as-hud (also hides its chat)
+        if GetResourceState('as-hud') == 'started' then
+            exports['as-hud']:SetVisible(not hidden)
+        end
+        -- Other HUDs, for example (check your HUD's docs):
         -- exports['your-hud']:SetHudVisible(not hidden)
         -- TriggerEvent('your-hud:client:toggle', not hidden)
     end,
@@ -122,15 +126,15 @@ Config.Webhook = ''
 -- Vehicle keys ---------------------------------------------------------------------------------
 -- as-garages gives the player keys when a vehicle is taken out or retrieved from the impound, can
 -- require keys to store one, and lends keys to other players. Details: docs/KEYS.md.
---   resource: 'auto' (qbx_vehiclekeys, qb-vehiclekeys or Renewed-Vehiclekeys, whichever runs),
---             or force 'qbx_vehiclekeys' | 'qb-vehiclekeys' | 'Renewed-Vehiclekeys'
+--   resource: 'auto' (as-vehiclekeys, qbx_vehiclekeys, qb-vehiclekeys or Renewed-Vehiclekeys, whichever runs),
+--             or force 'as-vehiclekeys' | 'qbx_vehiclekeys' | 'qb-vehiclekeys' | 'Renewed-Vehiclekeys'
 --             | 'ox_inventory' (keys are inventory items with the plate in their metadata)
 --             | 'custom' (your own script, see `custom` below) | 'none'
 Config.Keys = {
     resource = 'auto',
     item = 'vehiclekey',          -- item name for 'ox_inventory' keys
     requireKeysToStore = false,   -- true: you must hold the keys to store a vehicle (if the keys script can say)
-    removeOnStore = false,        -- true: take the keys away again when the vehicle is stored
+    removeOnStore = nil,          -- nil = automatic (on for as-vehiclekeys). true/false forces it
 
     -- For your own keys resource (resource = 'custom'). Fill in what your script offers; leave the rest.
     -- SERVER side. `entity` is the vehicle entity (may be nil). Return values are ignored except `has`.
@@ -146,6 +150,10 @@ Config.Keys = {
 
 -- Extra client code that runs right after a vehicle spawns (for example to unlock the doors).
 Config.GiveKeys = function(vehicle, plate)
+    -- as-vehiclekeys: make sure the doors are unlocked for the player taking the vehicle out
+    if GetResourceState('as-vehiclekeys') == 'started' then
+        pcall(function() exports['as-vehiclekeys']:SetLockState(vehicle, 1) end)
+    end
 end
 
 Config.Classes = {

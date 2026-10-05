@@ -4,6 +4,7 @@
 
 - Fix black boxes in the UI on FiveM browser builds that render `backdrop-filter` as solid black. All blur was removed and panels are slightly more opaque.
 - The 3D preview falls back to the garage's first bay when no preview point is set.
+- Built-in support for the AS scripts: as-vehiclekeys (give, take, check, unlock), as-hud (hides while a garage screen is open) and as-fuel (read and write fuel).
 - Vehicle keys: keys are given when a vehicle is taken out or retrieved, with built-in support for qbx_vehiclekeys, qb-vehiclekeys, Renewed-Vehiclekeys and ox_inventory item keys, plus a `custom` slot for any other script. Optional "keys required to store" and "remove keys on store". Lending keys uses the same setup. See `docs/KEYS.md`.
 - The HUD and radar are hidden while a garage screen is open (`Config.HideHud`), with a hook for custom HUDs and a `as-garages:client:hudToggled` event.
 - The default Legion Square garage now has 40 slots, so a server with many existing vehicles doesn't show "11 of 10".

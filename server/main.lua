@@ -488,7 +488,7 @@ lib.callback.register('asg:store', function(src, garageId, netId, props, km)
     })
     Bridge.setNative(plate, true, g.id)
     Spawned[plate] = nil
-    if Config.Keys.removeOnStore then Keys.remove(src, plate, entity) end
+    if Keys.removeOnStore() then Keys.remove(src, plate, entity) end
     DeleteEntity(entity)
     Locks[plate] = nil
     Log('Vehicle stored', ('%s (%s) stored %s in %s'):format(p.name, p.id, plate, g.label), plate, g.id)

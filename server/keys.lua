@@ -6,7 +6,7 @@
 
 Keys = {}
 
-local AUTO = { 'qbx_vehiclekeys', 'qb-vehiclekeys', 'Renewed-Vehiclekeys' }
+local AUTO = { 'as-vehiclekeys', 'qbx_vehiclekeys', 'qb-vehiclekeys', 'Renewed-Vehiclekeys' }
 
 local function adapterName()
     local want = Config.Keys.resource
@@ -24,7 +24,22 @@ local function viaClient(adapter, action)
     end
 end
 
+-- Display name shown on the key item, taken from the model name when the framework stores one.
+local function keyLabel(plate)
+    local v = Bridge.getVehicle(plate)
+    if v and type(v.model) == 'string' and v.model ~= '' then
+        return (v.model:gsub('^%l', string.upper))
+    end
+end
+
 local ADAPTERS = {
+    -- as-vehiclekeys: keys are inventory items. It hands the key back when a vehicle is taken out
+    -- and takes it when the vehicle is stored.
+    ['as-vehiclekeys'] = {
+        give = function(src, plate) exports['as-vehiclekeys']:GiveKey(src, plate, keyLabel(plate)) end,
+        remove = function(src, plate) exports['as-vehiclekeys']:TakeKey(src, plate) end,
+        has = function(src, plate) return exports['as-vehiclekeys']:HasKey(src, plate) == true end,
+    },
     qbx_vehiclekeys = {
         give = function(src, plate, entity) if entity then exports.qbx_vehiclekeys:GiveKeys(src, entity) end end,
         remove = function(src, plate, entity) if entity then exports.qbx_vehiclekeys:RemoveKeys(src, entity) end end,
@@ -92,4 +107,12 @@ function Keys.has(src, plate, entity)
     local res = call('has', src, plate, entity)
     if res == nil then return true end
     return res == true
+end
+
+-- Should the keys be taken away when a vehicle is stored? Config.Keys.removeOnStore = true / false
+-- decides; left as nil it is automatic (on for as-vehiclekeys, off for everything else).
+function Keys.removeOnStore()
+    local setting = Config.Keys.removeOnStore
+    if setting ~= nil then return setting == true end
+    return adapterName() == 'as-vehiclekeys'
 end
