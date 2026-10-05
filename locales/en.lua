@@ -142,4 +142,5 @@ Locales.en = {
     upgrade_now = "Slots now",
     upgrade_after = "Slots after",
     upgrade_confirm = "Buy upgrade",
+    keys_required = "You need the keys to store this vehicle.",
 }

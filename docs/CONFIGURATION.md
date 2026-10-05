@@ -54,9 +54,9 @@ A vehicle that is out and then disappears (deleted, server restart) is handled b
 - `TransferDelay`: seconds a transferred vehicle takes to arrive. `0` (default) is instant. Vehicles in transit can't be taken out or sold until they arrive.
 - `Abandoned`: a vehicle with nobody in it and no player within `radius` for `minutes` is impounded (`action = 'impound'`, with `fee`) or returned to its garage (`action = 'garage'`).
 - `Repair`: `pricePerPercent` for each missing percent of engine plus body health. Repairs happen from the garage screen for stored vehicles.
-- `ShareKeys`: lend keys for `minutes`. Set `give` and `remove` for your keys resource. The vehicle must be out.
+- `ShareKeys`: lend keys for `minutes` through `Config.Keys` (see [KEYS.md](KEYS.md)). The vehicle must be out.
 - `Upgrades`: price, slots per purchase and the maximum extra slots for private garages.
-- `Fuel`: `get` and `set` hooks. Defaults cover `ox_fuel`, `LegacyFuel`, `cdn-fuel` and `ps-fuel`.
+- `Fuel`: `get` and `set` hooks. Defaults cover `as-fuel`, `ox_fuel`, `LegacyFuel`, `cdn-fuel` and `ps-fuel`.
 - `Preview`: turntable and headlights defaults for the 3D preview. Players can toggle both in the UI.
 - `HistoryDays`: how long per-vehicle history is kept.
 
@@ -64,7 +64,7 @@ A vehicle that is out and then disappears (deleted, server restart) is handled b
 
 - `Theme = { mode = 'dark' | 'light', accent = '#A594FF' }`. Players can also flip light/dark in the UI, and their choice is remembered on their machine. The accent can be any hex colour; text colours are chosen automatically for contrast.
 - `Sounds = true` plays the game's menu sounds. Set `false` to silence them.
-- `HideHud`: hides the radar and HUD while a garage screen is open and restores it afterwards (`enabled = true` by default). The default game HUD is handled automatically. For a custom HUD resource, fill in `hook(hidden)` with that HUD's own export or event.
+- `HideHud`: hides the radar and HUD while a garage screen is open and restores it afterwards (`enabled = true` by default). The default game HUD is handled automatically, and `as-hud` is supported out of the box. For another HUD resource, fill in `hook(hidden)` with that HUD's own export or event.
 - Keyboard: arrow keys browse, Enter takes the main action, `1`-`6` switch preview camera, `F` favourites. A gamepad works where the game's browser exposes it (D-pad, A, B, bumpers).
 
 ## Logging
@@ -74,7 +74,7 @@ A vehicle that is out and then disappears (deleted, server restart) is handled b
 
 ## Keys
 
-`GiveKeys(vehicle, plate)` runs on the client after a vehicle spawns. The default handles `qbx_vehiclekeys` and `qb-vehiclekeys`. Replace it for any other keys resource.
+`Config.Keys` connects your keys resource (as-vehiclekeys, qbx_vehiclekeys, qb-vehiclekeys, Renewed-Vehiclekeys, ox_inventory item keys, or your own script). See [KEYS.md](KEYS.md).
 
 ## Defining garages in `config.lua`
 

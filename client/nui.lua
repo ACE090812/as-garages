@@ -30,7 +30,6 @@ function SetHud(hidden)
                 HideHudAndRadarThisFrame()
                 Wait(0)
             end
-            DisplayRadar(true)
         end)
     end
 end

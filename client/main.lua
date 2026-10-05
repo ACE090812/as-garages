@@ -305,3 +305,28 @@ lib.callback.register('asg:confirmSale', function(d)
     answered = true
     return answer == 'confirm'
 end)
+
+-- Keys resources whose exports only work on the client. The server asks us to run them.
+local CLIENT_KEYS = {
+    ['Renewed-Vehiclekeys'] = {
+        give = function(plate) exports['Renewed-Vehiclekeys']:addKey(plate) end,
+        remove = function(plate) exports['Renewed-Vehiclekeys']:removeKey(plate) end,
+    },
+    custom = {
+        give = function(plate, vehicle) if Config.Keys.custom.clientGive then Config.Keys.custom.clientGive(plate, vehicle) end end,
+        remove = function(plate, vehicle) if Config.Keys.custom.clientRemove then Config.Keys.custom.clientRemove(plate, vehicle) end end,
+    },
+}
+
+local function clientKeys(action)
+    return function(adapter, plate, netId)
+        local handler = CLIENT_KEYS[adapter] and CLIENT_KEYS[adapter][action]
+        if not handler then return end
+        local vehicle = netId and NetworkDoesNetworkIdExist(netId) and NetworkGetEntityFromNetworkId(netId) or nil
+        local ok, err = pcall(handler, plate, vehicle)
+        if not ok then print(('[as-garages] keys adapter "%s" failed on %s: %s'):format(adapter, action, tostring(err))) end
+    end
+end
+
+RegisterNetEvent('asg:keys:give', clientKeys('give'))
+RegisterNetEvent('asg:keys:remove', clientKeys('remove'))

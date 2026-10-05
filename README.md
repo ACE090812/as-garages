@@ -41,7 +41,7 @@ These are rendered from the real UI code with sample data. In the game the backg
 3. Start the server. Tables are created automatically.
 4. Run `/asgarage` in game to place your garages.
 
-Guides: [Install](docs/INSTALL.md) · [Configuration](docs/CONFIGURATION.md) · [Admin](docs/ADMIN.md) · [API](docs/API.md) · [Housing](docs/HOUSING.md) · [Interiors](docs/INTERIORS.md) · [FAQ](docs/FAQ.md) · [Changelog](CHANGELOG.md)
+Guides: [Install](docs/INSTALL.md) · [Configuration](docs/CONFIGURATION.md) · [Admin](docs/ADMIN.md) · [API](docs/API.md) · [Keys](docs/KEYS.md) · [Housing](docs/HOUSING.md) · [Interiors](docs/INTERIORS.md) · [FAQ](docs/FAQ.md) · [Changelog](CHANGELOG.md)
 
 ## Features
 
@@ -54,7 +54,7 @@ Guides: [Install](docs/INSTALL.md) · [Configuration](docs/CONFIGURATION.md) · 
 - **Impound:** `/impound` for officers (reason, fee, minimum hold, who can release). Owners pay the fee plus daily storage, officers release for free. Lost vehicles go to the impound or back to their garage.
 - **Admin editor (`/asgarage`):** create and edit garages, place points in the world, browse and force-return vehicles, read the logs, a stats dashboard, bulk tools, a duplicate-plate scanner, and garage export and import.
 - **Vehicles left on the road** are impounded or returned to their garage (configurable).
-- **Integration:** server exports and events (`docs/API.md`), a temporary-garage API for housing scripts, keys and fuel hooks, Discord webhook logging.
+- **Integration:** server exports and events (`docs/API.md`), a temporary-garage API for housing scripts, vehicle keys support (qbx, qb, Renewed, ox_inventory items, or your own script), fuel hooks, Discord webhook logging.
 - **Languages:** English, Spanish, French, German, Portuguese, Italian.
 
 ### Security
