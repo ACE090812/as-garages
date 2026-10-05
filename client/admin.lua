@@ -53,6 +53,7 @@ end)
 -- Placement mode: the editor hides, the admin walks (or drives) to the spot and presses E.
 -- Replies with the position (and heading) or { cancel = true }.
 RegisterNUICallback('adminPlace', function(body, cb)
+    SetHud(false)
     SetNuiFocus(false, false)
     SendNUIMessage({ action = 'hide' })
     lib.showTextUI(('[E] Place %s   [BACKSPACE] Cancel'):format(body.label or 'point'))
@@ -72,6 +73,7 @@ RegisterNUICallback('adminPlace', function(body, cb)
     end
 
     lib.hideTextUI()
+    SetHud(true)
     SetNuiFocus(true, true)
     SendNUIMessage({ action = 'show' })
     cb(result or { cancel = true })

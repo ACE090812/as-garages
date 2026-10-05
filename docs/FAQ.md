@@ -18,7 +18,11 @@
 
 **Does it support boats and aircraft?** Yes. Make a garage with bays on water or a helipad and limit it with `vehicleClasses`.
 
-**The preview shows the wrong angle or nothing.** The garage needs a 3D preview point (`/asgarage` > Locations). Without one, no preview is shown.
+**The preview shows the wrong angle or nothing.** Set a 3D preview point (`/asgarage` > Locations). Without one, the preview car is shown on the garage's first bay.
+
+**The UI has black boxes.** Some FiveM browser builds render blur effects as black. Version 0.3.1 removed all blur, so update to that or newer.
+
+**"11 of 10 slots".** Vehicles the script has never seen are assumed to be parked in `Config.DefaultGarage`, even past its slot limit. Give that garage enough slots (the default is 40) or move vehicles with the admin Tools tab.
 
 **How do I add a language?** See "Translating" in [CONFIGURATION.md](CONFIGURATION.md).
 
@@ -37,3 +41,5 @@
 **How do I add an interior?** See [INTERIORS.md](INTERIORS.md).
 
 **Does it work with a controller?** Keyboard navigation always works. Gamepad input works where the game's browser exposes it; it may not on every build.
+
+**My custom HUD stays on screen in the garage.** The radar and default HUD hide automatically. For a custom HUD, set `Config.HideHud.hook` (see [CONFIGURATION.md](CONFIGURATION.md)), or listen to the `as-garages:client:hudToggled` event from the HUD resource.

@@ -64,6 +64,7 @@ A vehicle that is out and then disappears (deleted, server restart) is handled b
 
 - `Theme = { mode = 'dark' | 'light', accent = '#A594FF' }`. Players can also flip light/dark in the UI, and their choice is remembered on their machine. The accent can be any hex colour; text colours are chosen automatically for contrast.
 - `Sounds = true` plays the game's menu sounds. Set `false` to silence them.
+- `HideHud`: hides the radar and HUD while a garage screen is open and restores it afterwards (`enabled = true` by default). The default game HUD is handled automatically. For a custom HUD resource, fill in `hook(hidden)` with that HUD's own export or event.
 - Keyboard: arrow keys browse, Enter takes the main action, `1`-`6` switch preview camera, `F` favourites. A gamepad works where the game's browser exposes it (D-pad, A, B, bumpers).
 
 ## Logging

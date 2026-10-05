@@ -114,6 +114,20 @@ Config.Theme = { mode = 'dark', accent = '#A594FF' }
 -- Game sounds for UI clicks
 Config.Sounds = true
 
+-- Hide the HUD (radar, health/armor, etc.) while a garage screen is open, and bring it back after.
+-- The default game HUD and radar are always handled. For a custom HUD resource, set `hook`: it is
+-- called with true when the screen opens and false when it closes. Check your HUD's own docs for
+-- the right export or event. Other scripts can also listen to the client event
+-- 'as-garages:client:hudToggled' (hidden) or read LocalPlayer.state['asg:uiOpen'].
+Config.HideHud = {
+    enabled = true,
+    hook = function(hidden)
+        -- Examples (uncomment and adjust for the HUD you use):
+        -- exports['your-hud']:SetHudVisible(not hidden)
+        -- TriggerEvent('your-hud:client:toggle', not hidden)
+    end,
+}
+
 -- Ace permission for /asgarage (add_ace group.admin asgarages.admin allow)
 Config.AdminAce = 'asgarages.admin'
 
@@ -152,7 +166,7 @@ Config.Classes = {
 Config.Garages = {
     {
         id = 'legion_square', label = 'Legion Square', sub = 'Public garage · Vinewood',
-        type = 'public', coords = vec3(215.8, -810.1, 30.7), radius = 3.0, slots = 10,
+        type = 'public', coords = vec3(215.8, -810.1, 30.7), radius = 3.0, slots = 40,
         spawns = { vec4(222.1, -804.6, 30.0, 248.0), vec4(224.9, -801.3, 30.0, 248.0) },
         blip = { sprite = 357, color = 3, scale = 0.7 },
     },

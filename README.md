@@ -2,7 +2,7 @@
 
 Modern garages and impound for FiveM. Works on **QBCore**, **Qbox** and **ESX** (auto-detected).
 
-> Status: v0.3.0. The code has been syntax-checked but **not yet tested on a live server**. Expect to tune coordinates and fix small things on first run.
+> Status: v0.3.1. The code has been syntax-checked but **not yet tested on a live server**. Expect to tune coordinates and fix small things on first run.
 
 ## Screenshots
 

@@ -16,6 +16,29 @@ function Sfx(kind)
     if s then PlaySoundFrontend(-1, s[1], s[2], true) end
 end
 
+-- HUD hiding while a screen is open (Config.HideHud). Safe to call repeatedly.
+local hudHidden = false
+function SetHud(hidden)
+    if not Config.HideHud.enabled or hidden == hudHidden then return end
+    hudHidden = hidden
+    LocalPlayer.state:set('asg:uiOpen', hidden, false)
+    TriggerEvent('as-garages:client:hudToggled', hidden)
+    pcall(Config.HideHud.hook, hidden)
+    if hidden then
+        CreateThread(function()
+            while hudHidden do
+                HideHudAndRadarThisFrame()
+                Wait(0)
+            end
+            DisplayRadar(true)
+        end)
+    end
+end
+
+AddEventHandler('onResourceStop', function(res)
+    if res == GetCurrentResourceName() then SetHud(false) end
+end)
+
 function Strings()
     local t = {}
     for k, v in pairs(Locales.en) do t[k] = v end
@@ -25,6 +48,7 @@ end
 
 function OpenNui(view, data)
     Open = true
+    SetHud(true)
     SetNuiFocus(true, true)
     SendNUIMessage({ action = 'open', view = view, data = data, t = Strings(), theme = Config.Theme, sounds = Config.Sounds,
                      preview = { spin = Config.Preview.spin, lights = Config.Preview.lights } })
@@ -38,6 +62,7 @@ function CloseNui()
     PropsCache = {}
     previewToken = previewToken + 1
     Preview.stop()
+    SetHud(false)
     SetNuiFocus(false, false)
     SendNUIMessage({ action = 'close' })
 end
